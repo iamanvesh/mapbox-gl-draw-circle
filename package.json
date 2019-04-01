@@ -4,7 +4,8 @@
   "description": "A module to draw a circle using mapbox-gl-draw",
   "main": "index",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --all",
+    "coverage": "jest --all --coverage"
   },
   "keywords": [
     "mapbox",
@@ -14,5 +15,16 @@
     "draw"
   ],
   "author": "Anvesh Kumar Arrabochu",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.1.1",
+    "@turf/along": "^6.0.1",
+    "@turf/circle": "^6.0.1",
+    "@turf/distance": "^6.0.1",
+    "@turf/helpers": "^6.1.4",
+    "@turf/length": "^6.0.2"
+  },
+  "devDependencies": {
+    "jest": "^24.5.0"
+  }
 }
