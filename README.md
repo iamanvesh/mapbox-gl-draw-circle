@@ -2,7 +2,17 @@
 
 Adds support for drawing and editing a circle feature using [mapbox-gl-draw](https://github.com/mapbox/mapbox-gl-draw) library.
 
+## Demo
+
+![Demo](https://media.giphy.com/media/24G0qw2DFYwFJo3iR9/source.gif)
+
 ## Usage
+
+### Installation
+
+```
+npm install mapbox-gl-draw-circle
+```
 
 ```
 import { CircleMode, DirectMode, SimpleSelectMode } from 'mapbox-gl-draw-circle';
