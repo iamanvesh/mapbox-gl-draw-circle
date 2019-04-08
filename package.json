@@ -26,5 +26,9 @@
   },
   "devDependencies": {
     "jest": "^24.5.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iamanvesh/mapbox-gl-draw-circle"
   }
 }

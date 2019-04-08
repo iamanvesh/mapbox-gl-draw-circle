@@ -18,8 +18,10 @@ npm install mapbox-gl-draw-circle
 import { CircleMode, DirectMode, SimpleSelectMode } from 'mapbox-gl-draw-circle';
 
 
+// userProperties has to be enabled
 const draw = new MapboxDraw({
   defaultMode: "draw_circle",
+  userProperties: true,
   modes: {
     ...MapboxDraw.modes,
     draw_circle: CircleMode,
