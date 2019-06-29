@@ -22,7 +22,8 @@
     "@turf/circle": "^6.0.1",
     "@turf/distance": "^6.0.1",
     "@turf/helpers": "^6.1.4",
-    "@turf/length": "^6.0.2"
+    "@turf/length": "^6.0.2",
+    "@turf/turf": "^5.1.6"
   },
   "devDependencies": {
     "jest": "^24.5.0"
