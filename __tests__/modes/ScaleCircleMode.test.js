@@ -38,16 +38,6 @@ describe('CircleMode tests', () => {
     CircleMode.changeMode.mockClear();
   });
 
-  xit('should setup state with a polygon and initialRadius', () => {
-    CircleMode.newFeature.mockReturnValue(mockFeature);
-    expect(CircleMode.onSetup({})).toEqual({
-      initialRadiusInKm: 2,
-      polygon: mockFeature,
-      currentVertexPosition: 0
-    });
-    expect(CircleMode.newFeature).toHaveBeenCalled();
-  });
-
   it('should add feature onSetup', () => {
     CircleMode.newFeature.mockReturnValue(mockFeature);
     CircleMode.onSetup({});
@@ -62,5 +52,24 @@ describe('CircleMode tests', () => {
   it('should disable double click zoom on setup', () => {
     CircleMode.onSetup({});
     expect(doubleClickZoom.disable).toHaveBeenCalled();
+  });
+
+  it('should set the cursor to "add" button', () => {
+    CircleMode.onSetup({});
+    expect(CircleMode.updateUIClasses).toHaveBeenCalledWith({
+      mouse: Constants.cursors.ADD
+    });
+  });
+
+  it('should activate the polygon button on ui', () => {
+    CircleMode.onSetup({});
+    expect(CircleMode.activateUIButton).toHaveBeenCalledWith(Constants.types.POLYGON);
+  });
+
+  it('should set actionable state by enabling trash', () => {
+    CircleMode.onSetup({});
+    expect(CircleMode.setActionableState).toHaveBeenCalledWith({
+      trash: true
+    });
   });
 });
