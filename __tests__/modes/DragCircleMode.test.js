@@ -246,4 +246,11 @@ describe('DragCircleMode', function () {
     expect(state.polygon.incomingCoords).toHaveBeenCalledWith([12, 2])
     expect(state.polygon.properties.radiusInKm).toEqual(2);
   });
+
+  it('should set the cursor to "pointer" button', () => {
+    DragCircleMode.onSetup({});
+    expect(DragCircleMode.updateUIClasses).toHaveBeenCalledWith({
+      mouse: Constants.cursors.ADD
+    });
+  });
 });
