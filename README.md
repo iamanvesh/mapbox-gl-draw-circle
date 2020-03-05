@@ -76,6 +76,11 @@ Sample feature object returned in `draw.create` event
 
 ## Changelog
 
+### v1.1.2
+
+* 开启定制化维护
+* 增加鼠标移出地图时执行绘制完成操作
+
 ### v1.1.0
 
 * Added a new DragCircle mode.
