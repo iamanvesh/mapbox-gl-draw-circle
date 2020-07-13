@@ -3,9 +3,12 @@
   "version": "1.1.1",
   "description": "A module to draw a circle using mapbox-gl-draw",
   "main": "index",
+  "browser": "dist/mapbox-gl-draw-circle.min.js",
   "scripts": {
+    "build": "rimraf dist && rollup -c",
     "test": "jest --all",
-    "coverage": "jest --all --coverage"
+    "coverage": "jest --all --coverage",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mapbox",
@@ -17,7 +20,6 @@
   "author": "Anvesh Kumar Arrabochu",
   "license": "ISC",
   "dependencies": {
-    "@mapbox/mapbox-gl-draw": "^1.1.1",
     "@turf/along": "^6.0.1",
     "@turf/circle": "^6.0.1",
     "@turf/distance": "^6.0.1",
@@ -25,7 +27,17 @@
     "@turf/length": "^6.0.2"
   },
   "devDependencies": {
-    "jest": "^24.5.0"
+    "@mapbox/mapbox-gl-draw": "^1.1.2",
+    "@rollup/plugin-commonjs": "^13.0.1",
+    "@rollup/plugin-node-resolve": "^8.4.0",
+    "jest": "^24.5.0",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.21.0",
+    "rollup-plugin-terser": "^6.1.0",
+    "rollup-plugin-visualizer": "^4.0.4"
+  },
+  "peerDependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.1.2"
   },
   "repository": {
     "type": "git",
