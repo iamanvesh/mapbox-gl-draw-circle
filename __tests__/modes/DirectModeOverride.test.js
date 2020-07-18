@@ -1,7 +1,7 @@
 
 jest.mock('@mapbox/mapbox-gl-draw/src/lib/create_supplementary_points');
 jest.mock('@mapbox/mapbox-gl-draw/src/lib/move_features');
-jest.mock('@mapbox/mapbox-gl-draw/src/lib/constrain_feature_movement');
+jest.mock('@mapbox/mapbox-gl-draw/src/lib/constrain_feature_movement', () => jest.fn((_, x) => x));
 jest.mock('@turf/distance', () => ({ default: jest.fn() }));
 jest.mock('@turf/helpers');
 jest.mock('@turf/circle', () => ({ default: jest.fn() }));
@@ -45,16 +45,15 @@ describe('DirectMode tests', () => {
         },
         geometry: {
           coordinates: []
-        }
+        },
+        incomingCoords: jest.fn(),
+        toGeoJSON: function() { return this; }
       }
     ];
     mockState = {
       featureId: 1,
-      feature: {
-        ...mockFeatures[0],
-        incomingCoords: jest.fn()
-      }
-    }
+      feature: mockFeatures[0]
+    };
     DirectMode.getSelected.mockReturnValue(mockFeatures);
   });
 
@@ -64,8 +63,10 @@ describe('DirectMode tests', () => {
   });
 
   it('should move selected features when dragFeature is invoked', () => {
+    circle.mockReturnValue(mockFeatures[0]);
     DirectMode.dragFeature(mockState, mockEvent, mockDelta);
-    expect(moveFeatures).toHaveBeenCalledWith(mockFeatures, mockDelta);
+    expect(mockState.feature.incomingCoords).toHaveBeenCalledWith(mockFeatures[0].geometry.coordinates);
+    expect(moveFeatures).toHaveBeenCalledWith([], mockDelta);
   });
 
   it('should update the center of the selected feature if its a circle', () => {
