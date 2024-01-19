@@ -2,4 +2,4 @@ export const CircleMode = require('./lib/modes/CircleMode');
 export const DragCircleMode = require('./lib/modes/DragCircleMode');
 export const DirectMode = require('./lib/modes/DirectModeOverride');
 export const SimpleSelectMode = require('./lib/modes/SimpleSelectModeOverride');
-export const ClickCircleMode = require('./lib/modes/ClickCircleMode')
+export const RadiusMode = require('./lib/modes/RadiusMode')
