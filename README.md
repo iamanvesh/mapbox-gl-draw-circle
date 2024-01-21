@@ -1,6 +1,10 @@
-# mapbox-gl-draw-circle
+# mapbox-gl-draw-circle-modes
 
-Adds support for drawing and editing a circle feature using [mapbox-gl-draw](https://github.com/mapbox/mapbox-gl-draw) library.
+Extends [mapbox-gl-draw](https://github.com/mapbox/mapbox-gl-draw) library by providing custom modes for drawing and editing of a circle. Following are the available modes:
+
+- CircleMode: User can click a point to create circle of fixed radius
+- DragCircleMode: User can click a point and drag it to create a circle
+- RadiusCircleMode: User can click two point to define center and radius of a circle
 
 ## Demo
 
@@ -10,22 +14,22 @@ Adds support for drawing and editing a circle feature using [mapbox-gl-draw](htt
 ##### Drag Circle mode
 ![Drag Circle Mode Demo](demo/DragCircleDemo.gif)
 
-
 ## Usage
 
 ### Installation
 
 ```
-npm install mapbox-gl-draw-circle
+npm install mapbox-gl-draw mapbox-gl-draw-circle-modes 
 ```
 
 ```
 import {
     CircleMode,
     DragCircleMode,
+    RadiusCircleMode,
     DirectMode,
-    SimpleSelectMode
-} from 'mapbox-gl-draw-circle';
+    SimpleSelectMode,
+} from 'mapbox-gl-draw-circle-modes';
 
 
 // userProperties has to be enabled
@@ -36,6 +40,7 @@ const draw = new MapboxDraw({
     ...MapboxDraw.modes,
     draw_circle  : CircleMode,
     drag_circle  : DragCircleMode,
+    radius_circle: RadiusCircleMode,
     direct_select: DirectMode,
     simple_select: SimpleSelectMode
   }
@@ -73,10 +78,3 @@ Sample feature object returned in `draw.create` event
   }
 }
 ```
-
-## Changelog
-
-### v1.1.0
-
-* Added a new DragCircle mode.
-* Fixed issue (#5), where the polygon mode was not working when used along with CircleMode.

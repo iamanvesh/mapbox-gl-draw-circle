@@ -1,8 +1,30 @@
 {
-  "name": "mapbox-gl-draw-circle",
-  "version": "1.1.2",
-  "description": "A module to draw a circle using mapbox-gl-draw",
-  "main": "index",
+  "name": "mapbox-gl-draw-circle-modes",
+  "version": "2.0.0",
+  "description": "Provides multiple ways (modes) to draw a circle by extending mapbox-gl-draw",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/prolincur/mapbox-gl-draw-circle-mode"
+  },
+  "bugs": {
+    "url": "https://github.com/prolincur/mapbox-gl-draw-circle-mode/issues"
+  },
+  "homepage": "https://github.com/prolincur/mapbox-gl-draw-circle-mode",
+  "author": "Prolincur Technologies LLP",
+  "contributors": [
+    "Prolincur Technologies <https://www.prolincur.com>",
+    "Anvesh Kumar Arrabochu"
+  ],
+  "license": "MIT",
+  "files": [
+    "lib/*"
+  ],
   "scripts": {
     "test": "jest --all",
     "coverage": "jest --all --coverage"
@@ -14,8 +36,6 @@
     "mapbox",
     "draw"
   ],
-  "author": "Anvesh Kumar Arrabochu",
-  "license": "MIT",
   "dependencies": {
     "@mapbox/mapbox-gl-draw": "1.1.1",
     "@turf/along": "^6.0.1",
@@ -26,9 +46,5 @@
   },
   "devDependencies": {
     "jest": "^24.5.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/iamanvesh/mapbox-gl-draw-circle"
   }
 }
