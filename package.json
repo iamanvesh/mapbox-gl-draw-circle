@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-draw-circle-modes",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Provides multiple ways (modes) to draw a circle by extending mapbox-gl-draw",
   "main": "index.js",
   "exports": {
@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/prolincur/mapbox-gl-draw-circle-mode"
+    "url": "https://github.com/prolincur/mapbox-gl-draw-circle-modes"
   },
   "bugs": {
-    "url": "https://github.com/prolincur/mapbox-gl-draw-circle-mode/issues"
+    "url": "https://github.com/prolincur/mapbox-gl-draw-circle-modes/issues"
   },
-  "homepage": "https://github.com/prolincur/mapbox-gl-draw-circle-mode",
+  "homepage": "https://github.com/prolincur/mapbox-gl-draw-circle-modes",
   "author": "Prolincur Technologies LLP",
   "contributors": [
     "Prolincur Technologies <https://www.prolincur.com>",
