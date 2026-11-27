@@ -133,6 +133,7 @@ CI runs the browser tests on MapLibre as a non-blocking job.
 - **Install `@mapbox/mapbox-gl-draw` yourself.** It's now a peer dependency, version 1.4.0 or newer; 1.x bundled draw 1.1.1. Your app now uses a single copy of draw.
 - **The package is ESM only.** See [Installation](#installation) for `require()` support.
 - **Remove old workarounds.** Builds no longer need `legacy-peer-deps`, a `global` polyfill (`define: { global: 'globalThis' }`) or webpack `fs`/`path` fallbacks. Those were caused by draw 1.1.1's dependencies.
+- **Import only from `mapbox-gl-draw-circle`.** Internal paths such as `mapbox-gl-draw-circle/lib/modes/CircleMode` are no longer importable.
 - **`MapboxDraw.modes` is no longer changed.** Importing the plugin used to change `MapboxDraw.modes.simple_select` and `direct_select` for the whole page. Now circles get the circle behaviour only where you register `SimpleSelectMode` / `DirectMode`, as in the usage example.
 - **Custom styles may need new layer ids.** mapbox-gl-draw 1.5 renamed its default style layers, for example `gl-draw-polygon-fill-inactive` became `gl-draw-polygon-fill`. This only matters if you pass custom `styles` or query draw's layers by id. See the [mapbox-gl-draw changelog](https://github.com/mapbox/mapbox-gl-draw/blob/main/CHANGELOG.md).
 
@@ -148,7 +149,7 @@ npm ci && npm test                                       # unit tests (Jest)
 
 The browser tests and fixtures need Chromium once: `npx playwright install chromium`.
 
-`examples/demo` is also the interactive demo. Run `npm run dev` there. Set `VITE_MAPBOX_TOKEN` for a real basemap, or `VITE_MAP_ENGINE=maplibre` to run it on MapLibre.
+`examples/demo` is also the interactive demo; see its [README](examples/demo/README.md) for setup and a manual test checklist. Run `npm run dev` there. Set `VITE_MAPBOX_TOKEN` for a real basemap, or `VITE_MAP_ENGINE=maplibre` to run it on MapLibre.
 
 ## License
 

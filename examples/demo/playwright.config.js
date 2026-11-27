@@ -31,6 +31,13 @@ export default defineConfig({
     // Always start our own build: reusing whatever listens on the port can silently test a
     // different checkout (e.g. another git worktree). A busy port fails loudly instead.
     reuseExistingServer: false,
+    // Pin the build settings so a tester's .env.local can't change what the tests run on:
+    // values already in the environment take priority over Vite's .env files.
+    env: {
+      ...process.env,
+      VITE_MAP_ENGINE: process.env.VITE_MAP_ENGINE || 'mapbox',
+      VITE_BASEMAP: 'blank', // offline: tests never depend on remote tiles
+    },
     timeout: 120_000,
   },
 });

@@ -14,7 +14,26 @@
         box-shadow: 0 1px 4px rgba(0,0,0,.3);
       }
       #toolbar button { font: inherit; padding: 4px 8px; cursor: pointer; }
-      #toolbar button[aria-pressed="true"] { background: #3bb2d0; color: #fff; }
+      #toolbar button[aria-pressed="true"] { background: #4F46E5; border-color: #4F46E5; color: #fff; }
+      #toolbar label { display: flex; align-items: center; gap: 4px; font-size: 13px; }
+      #toolbar input { width: 4.5em; font: inherit; }
+      #inspector {
+        position: absolute; top: 10px; right: 10px; bottom: 30px; z-index: 1; width: 270px;
+        display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+        background: rgba(255,255,255,.95); padding: 8px 10px; border-radius: 6px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.3); font-size: 12px;
+      }
+      #inspector h2 { font-size: 12px; margin: 0; text-transform: uppercase; letter-spacing: .04em; color: #555; }
+      #inspector ol, #inspector ul { margin: 0; padding-left: 18px; }
+      #inspector code { font-size: 11px; }
+      #features { max-height: 40%; overflow: auto; }
+      #log { flex: 1; overflow: auto; font-family: ui-monospace, monospace; font-size: 11px; }
+      #log li.create { color: #2a7a2a; } #log li.update { color: #1d5fa8; } #log li.delete { color: #b02a2a; }
+      .warn { color: #b02a2a; font-weight: 600; }
+      #notice {
+        position: absolute; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 1; max-width: 560px;
+        background: #fff4e5; border: 1px solid #f0b86e; padding: 8px 12px; border-radius: 6px; font-size: 13px;
+      }
     </style>
   </head>
   <body>
@@ -25,7 +44,16 @@
       <button data-mode="draw_polygon">Polygon</button>
       <button data-mode="simple_select">Select</button>
       <button id="trash">Delete</button>
+      <button id="clear">Clear all</button>
+      <label>Radius km <input id="radius" type="number" min="0.01" step="0.1" value="2" /></label>
     </div>
+    <aside id="inspector" aria-label="Inspector">
+      <div><h2>Mode</h2><code id="mode">-</code> · <span id="engine"></span> · pan: <code id="pan">-</code></div>
+      <div id="features"><h2>Features (<span id="count">0</span>)</h2><ol id="feature-list"></ol></div>
+      <h2>Events</h2>
+      <ul id="log"></ul>
+    </aside>
+    <div id="notice" hidden></div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

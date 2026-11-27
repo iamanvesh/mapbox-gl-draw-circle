@@ -3,9 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 5173",
+    "dev:maplibre": "VITE_MAP_ENGINE=maplibre vite --port 5174",
     "build": "vite build",
-    "preview": "vite preview --port 4173 --strictPort"
+    "preview": "vite preview --port 4173 --strictPort",
+    "test:e2e": "playwright test",
+    "test:e2e:maplibre": "VITE_MAP_ENGINE=maplibre playwright test"
   },
   "dependencies": {
     "@mapbox/mapbox-gl-draw": "^1.5.2",
