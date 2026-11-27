@@ -32,3 +32,6 @@ fixtures/test-results/
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Local GitHub Pages builds (see .github/workflows/pages.yml)
+examples/demo/site/

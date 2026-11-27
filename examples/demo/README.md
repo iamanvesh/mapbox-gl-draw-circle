@@ -57,6 +57,21 @@ npm run dev            # http://localhost:5173 — mapbox-gl v3, needs VITE_MAPB
 
 The 4 resize handles appear only in `direct_select`. In `simple_select`, mapbox-gl-draw 1.5 shows no vertices, so a selected circle has no handles there. That's upstream behaviour, not a bug.
 
+## Hosted demo (GitHub Pages)
+
+`.github/workflows/pages.yml` publishes this app on every push to master that touches the plugin or the demo:
+
+- https://iamanvesh.github.io/mapbox-gl-draw-circle/ runs on mapbox-gl and uses the `MAPBOX_DEMO_TOKEN` repository secret.
+- https://iamanvesh.github.io/mapbox-gl-draw-circle/maplibre/ runs on MapLibre with the OpenFreeMap basemap and needs no token.
+
+Without the secret, the root page is the MapLibre build.
+
+**Hosted demo token.** A browser map token can't be hidden: it is part of the page's JavaScript, and anyone can read it. Make it safe to expose instead:
+1. Create a dedicated token at https://account.mapbox.com/access-tokens/ for this site only. Use the default public scopes; never use a secret `sk.` token.
+2. Under **URL restrictions**, add `https://iamanvesh.github.io`. Use the domain only: browsers usually send just the domain when the map requests tiles, so a restriction that includes the path could block your own page.
+3. Save it as a repository secret: `gh secret set MAPBOX_DEMO_TOKEN`. The secret keeps the token out of git and makes rotation easy; it doesn't hide it on the page.
+4. Set a usage alert in your Mapbox account. URL restrictions stop other websites from using the token, but a script outside the browser can fake the domain check. If the token is abused, rotate it and update the secret.
+
 ## Automated browser tests
 
 ```sh

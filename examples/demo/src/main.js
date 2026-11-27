@@ -114,6 +114,22 @@ map.on('draw.modechange', syncButtons);
 // Inspector: a manual-testing aid that shows what each action did to the features.
 const $ = (id) => document.getElementById(id);
 $('engine').textContent = engine === 'maplibre' ? 'MapLibre' : 'mapbox-gl';
+// Hosted demo (GitHub Pages): link to the same demo on the other engine and to the repository.
+const altEngineUrl = import.meta.env.VITE_ALT_ENGINE_URL;
+if (altEngineUrl) {
+  const link = document.createElement('a');
+  link.href = altEngineUrl;
+  link.textContent = `try ${engine === 'maplibre' ? 'mapbox-gl' : 'MapLibre'}`;
+  $('engine').after(' (', link, ')');
+}
+if (import.meta.env.VITE_REPO_URL) {
+  const repo = document.createElement('a');
+  repo.href = import.meta.env.VITE_REPO_URL;
+  repo.textContent = 'mapbox-gl-draw-circle on GitHub';
+  repo.style.display = 'block';
+  repo.style.marginTop = '4px';
+  $('mode').parentElement.append(repo);
+}
 const fmt = (n, d = 5) => (typeof n === 'number' ? n.toFixed(d) : String(n));
 
 function describe(f) {

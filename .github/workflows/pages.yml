@@ -1,0 +1,84 @@
+name: Demo site
+
+# Publishes examples/demo to GitHub Pages: https://iamanvesh.github.io/mapbox-gl-draw-circle/
+#   /           mapbox-gl v3, using the MAPBOX_DEMO_TOKEN secret
+#   /maplibre/  MapLibre + OpenFreeMap basemap, no token needed
+# Without the secret, / is the MapLibre build, so the site never shows a blank map.
+#
+# MAPBOX_DEMO_TOKEN must be a *public* (pk.) token restricted to https://iamanvesh.github.io.
+# It ends up in the page's JavaScript like any browser map token; the secret only keeps it out
+# of git and makes it easy to rotate.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - index.js
+      - lib/**
+      - examples/demo/**
+      - package.json
+      - package-lock.json
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/demo/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: examples/demo
+      - name: Build
+        working-directory: examples/demo
+        env:
+          MAPBOX_DEMO_TOKEN: ${{ secrets.MAPBOX_DEMO_TOKEN }}
+          SITE: /mapbox-gl-draw-circle/
+          VITE_REPO_URL: https://github.com/${{ github.repository }}
+          OPENFREEMAP_STYLE: https://tiles.openfreemap.org/styles/liberty
+        run: |
+          set -euo pipefail
+          rm -rf site
+          if [ -n "$MAPBOX_DEMO_TOKEN" ]; then
+            # MapLibre version under /maplibre/, mapbox-gl version at the root.
+            DEMO_BASE="${SITE}maplibre/" VITE_MAP_ENGINE=maplibre VITE_BASEMAP="$OPENFREEMAP_STYLE" \
+              VITE_ALT_ENGINE_URL="$SITE" npx vite build --outDir site/maplibre
+            DEMO_BASE="$SITE" VITE_MAP_ENGINE=mapbox VITE_MAPBOX_TOKEN="$MAPBOX_DEMO_TOKEN" \
+              VITE_ALT_ENGINE_URL="${SITE}maplibre/" npx vite build --outDir site/root
+            mv site/maplibre site/root/maplibre
+          else
+            echo "::warning::MAPBOX_DEMO_TOKEN is not set; publishing only the MapLibre demo."
+            DEMO_BASE="$SITE" VITE_MAP_ENGINE=maplibre VITE_BASEMAP="$OPENFREEMAP_STYLE" \
+              npx vite build --outDir site/root
+          fi
+          touch site/root/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: examples/demo/site/root
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
