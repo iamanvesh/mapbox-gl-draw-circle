@@ -31,3 +31,5 @@ demo/
 coverage/
 __tests__/
 .idea/
+examples/
+.github/

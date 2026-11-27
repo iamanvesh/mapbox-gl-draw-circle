@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mapbox-gl-draw-circle demo</title>
+    <style>
+      html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+      #map { position: absolute; inset: 0; }
+      #toolbar {
+        position: absolute; top: 10px; left: 10px; z-index: 1;
+        display: flex; gap: 6px; flex-wrap: wrap;
+        background: #fff; padding: 6px; border-radius: 6px;
+        box-shadow: 0 1px 4px rgba(0,0,0,.3);
+      }
+      #toolbar button { font: inherit; padding: 4px 8px; cursor: pointer; }
+      #toolbar button[aria-pressed="true"] { background: #3bb2d0; color: #fff; }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="toolbar">
+      <button data-mode="draw_circle">Circle (click)</button>
+      <button data-mode="drag_circle">Circle (drag)</button>
+      <button data-mode="draw_polygon">Polygon</button>
+      <button data-mode="simple_select">Select</button>
+      <button id="trash">Delete</button>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

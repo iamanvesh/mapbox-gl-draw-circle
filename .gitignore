@@ -24,3 +24,7 @@ yarn-error.log*
 
 node_modules/
 coverage/
+# Playwright
+test-results/
+playwright-report/
+dist/

@@ -1,0 +1,19 @@
+{
+  "name": "mapbox-gl-draw-circle-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "1.1.1",
+    "mapbox-gl": "^3.36.0",
+    "mapbox-gl-draw-circle": "1.1.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "vite": "^8.4.0"
+  }
+}
