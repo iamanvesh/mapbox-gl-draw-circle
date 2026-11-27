@@ -29,3 +29,6 @@ test-results/
 playwright-report/
 dist/
 fixtures/test-results/
+
+# Claude Code agent worktrees
+.claude/worktrees/

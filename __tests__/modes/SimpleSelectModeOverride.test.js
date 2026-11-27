@@ -30,9 +30,7 @@ describe('SimpleSelectModeOverride', () => {
 
       expect(c.properties.center[0]).toBeCloseTo(to[0], 10);
       expect(c.properties.center[1]).toBeCloseTo(to[1], 10);
-      // Translating in lng/lat keeps the ring centered; distances stay within 0.5%.
-      const ring = c.getCoordinates()[0];
-      expect(ring).toHaveLength(65);
+      expectCircleRing(c.getCoordinates()[0], c.properties.center, 0.5);
       expect(state.dragMoving).toBe(true);
       expect(state.dragMoveLocation).toEqual({ lng: to[0], lat: to[1] });
     });
@@ -82,11 +80,18 @@ describe('SimpleSelectModeOverride', () => {
     });
   });
 
-  test('a moved circle is still a valid circle around its new center', () => {
-    const c = makeCircle();
+  test('a circle moved far north stays a circle of the same radius (#24)', () => {
+    const c = new FakePolygon({
+      id: 'c1',
+      properties: { isCircle: true, center: [10, 0], radiusInKm: 50 },
+      coordinates: circle([10, 0], 50).geometry.coordinates,
+    });
     const mode = bindMode(SimpleSelectMode, { selected: [c] });
-    // Small move: lng/lat translation keeps distances within the 3-decimal tolerance.
-    mode.dragMove({ dragMoveLocation: { lng: center[0], lat: center[1] } }, mouseEvent([center[0] + 0.001, center[1]]));
-    expectCircleRing(c.getCoordinates()[0], c.properties.center, 0.5);
+    mode.dragMove({ dragMoveLocation: { lng: 10, lat: 0 } }, mouseEvent([10, 60]));
+
+    expect(c.properties.center[0]).toBeCloseTo(10, 10);
+    expect(c.properties.center[1]).toBeCloseTo(60, 10);
+    expect(c.properties.radiusInKm).toBe(50);
+    expectCircleRing(c.getCoordinates()[0], c.properties.center, 50);
   });
 });

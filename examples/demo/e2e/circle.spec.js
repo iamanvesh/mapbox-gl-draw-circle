@@ -2,11 +2,6 @@ import { test, expect, distanceKm } from './helpers.js';
 
 const ringOf = (f) => f.geometry.coordinates[0];
 
-// Known bugs in the published 1.1.2 (baseline, see e2e/BASELINE.md). Playwright reports an error
-// once a fix makes one of these pass, so each marker has to be removed together with its fix.
-const MISSING_VERTEX = 'baseline: every created circle loses ring point 1 (64 instead of 65 points)';
-const knownBug = (reason) => test.fail(true, reason);
-
 /** Checks the circle invariants every mode must keep. */
 function expectValidCircle(f, { center, radiusInKm }, tol = 0.02) {
   expect.soft(f.geometry.type).toBe('Polygon');
@@ -26,7 +21,6 @@ function expectValidCircle(f, { center, radiusInKm }, tol = 0.02) {
 
 test.describe('draw_circle (click)', () => {
   test('one click creates a circle of initialRadiusInKm and returns to simple_select', async ({ demo }) => {
-    knownBug(MISSING_VERTEX);
     await demo.changeMode('draw_circle', { initialRadiusInKm: 0.5 });
     const pt = await demo.mapPoint();
     const clicked = await demo.toLngLat(pt);
@@ -41,7 +35,6 @@ test.describe('draw_circle (click)', () => {
   });
 
   test('defaults to a 2 km radius', async ({ demo }) => {
-    knownBug(MISSING_VERTEX);
     await demo.changeMode('draw_circle');
     const pt = await demo.mapPoint();
     const clicked = await demo.toLngLat(pt);
@@ -53,7 +46,6 @@ test.describe('draw_circle (click)', () => {
 
 test.describe('drag_circle', () => {
   test('press-drag-release creates a circle whose radius is the drag distance', async ({ demo }) => {
-    knownBug(MISSING_VERTEX);
     await demo.changeMode('drag_circle');
     const from = await demo.mapPoint(-50, 0);
     const to = await demo.mapPoint(100, 0);
@@ -80,15 +72,42 @@ test.describe('drag_circle', () => {
     expect(await demo.dragPanEnabled()).toBe(true);
   });
 
-  test('a click without dragging does not throw or leave an invalid feature (#11, #21)', async ({ demo }) => {
-    knownBug('baseline: leaves a 1-point polygon behind (#11, #21)');
+  test('a click without dragging leaves nothing behind and the next drag still works (#11, #21)', async ({ demo }) => {
     await demo.changeMode('drag_circle');
     await demo.click(await demo.mapPoint());
     await demo.settle();
-    for (const f of await demo.features()) {
-      expect(ringOf(f).length).toBeGreaterThanOrEqual(4);
-    }
+    expect(await demo.features()).toEqual([]);
+    expect(await demo.mode()).toBe('drag_circle');
+    expect(await demo.events('draw.create')).toHaveLength(0);
+
+    await demo.drag(await demo.mapPoint(-50, 0), await demo.mapPoint(100, 0));
+    await demo.settle();
+    expect(await demo.features()).toHaveLength(1);
+    expect(await demo.events('draw.create')).toHaveLength(1);
   });
+
+  test('leaving drag_circle without drawing re-enables map panning', async ({ demo }) => {
+    await demo.changeMode('drag_circle');
+    await demo.settle();
+    expect(await demo.dragPanEnabled()).toBe(false);
+    await demo.changeMode('simple_select');
+    await demo.settle();
+    expect(await demo.dragPanEnabled()).toBe(true);
+  });
+
+  test('Escape cancels the circle being drawn', async ({ demo }) => {
+    await demo.changeMode('drag_circle');
+    const from = await demo.mapPoint(-50, 0);
+    await demo.page.mouse.move(from.x, from.y);
+    await demo.page.mouse.down();
+    await demo.page.mouse.move(from.x + 120, from.y, { steps: 10 });
+    await demo.page.keyboard.press('Escape');
+    await demo.page.mouse.up();
+    await demo.settle();
+    expect(await demo.features()).toEqual([]);
+    expect(await demo.events('draw.create')).toHaveLength(0);
+  });
+
 });
 
 test.describe('editing a circle', () => {
@@ -101,7 +120,6 @@ test.describe('editing a circle', () => {
   }
 
   test('simple_select: dragging the circle moves center and ring together', async ({ demo }) => {
-    knownBug(MISSING_VERTEX);
     const circle = await createCircle(demo);
     await demo.changeMode('simple_select', { featureIds: [circle.id] });
     const from = await demo.toPixel(circle.properties.center);
@@ -136,7 +154,6 @@ test.describe('editing a circle', () => {
   });
 
   test('direct_select: dragging the body moves the circle (#24)', async ({ demo }) => {
-    knownBug(MISSING_VERTEX);
     const circle = await createCircle(demo);
     await demo.changeMode('direct_select', { featureId: circle.id });
     await demo.settle();
@@ -146,6 +163,26 @@ test.describe('editing a circle', () => {
     await demo.drag(from, to);
     await demo.settle();
     expectValidCircle((await demo.features())[0], { center: newCenter, radiusInKm: 0.5 }, 0.05);
+  });
+
+  test('a circle moved far north keeps its radius in km (#24)', async ({ demo }) => {
+    await demo.page.evaluate(() => window.__demo.map.jumpTo({ center: [10, 30], zoom: 3 }));
+    await demo.settle();
+    await demo.changeMode('draw_circle', { initialRadiusInKm: 150 });
+    await demo.click(await demo.mapPoint(0, 120));
+    await demo.settle();
+    const circle = (await demo.features())[0];
+
+    await demo.changeMode('simple_select', { featureIds: [circle.id] });
+    const from = await demo.toPixel(circle.properties.center);
+    const to = { x: from.x, y: from.y - 240 };
+    const newCenter = await demo.toLngLat(to);
+    await demo.drag(from, to);
+    await demo.settle();
+
+    const moved = (await demo.features())[0];
+    expect(newCenter[1] - circle.properties.center[1]).toBeGreaterThan(15); // a big latitude change
+    expectValidCircle(moved, { center: newCenter, radiusInKm: 150 }, 0.001);
   });
 
   test('trash deletes the selected circle', async ({ demo }) => {

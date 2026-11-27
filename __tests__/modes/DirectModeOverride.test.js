@@ -31,8 +31,20 @@ describe('DirectModeOverride', () => {
 
       expect(c.properties.center[0]).toBeCloseTo(center[0] + delta.lng, 10);
       expect(c.properties.center[1]).toBeCloseTo(center[1] + delta.lat, 10);
-      expect(c.getCoordinates()[0][0][0]).toBeCloseTo(circle(center, 0.5).geometry.coordinates[0][0][0] + delta.lng, 10);
+      expectCircleRing(c.getCoordinates()[0], c.properties.center, 0.5);
       expect(state.dragMoveLocation).toBe(e.lngLat);
+    });
+
+    test('a circle moved far south stays a circle of the same radius (#24)', () => {
+      const c = new FakePolygon({
+        id: 'c1',
+        properties: { isCircle: true, center: [10, 0], radiusInKm: 50 },
+        coordinates: circle([10, 0], 50).geometry.coordinates,
+      });
+      const mode = bindMode(DirectMode, { selected: [c] });
+      mode.dragFeature({}, mouseEvent([10, -60]), { lng: 0, lat: -60 });
+      expect(c.properties.center[1]).toBeCloseTo(-60, 10);
+      expectCircleRing(c.getCoordinates()[0], c.properties.center, 50);
     });
   });
 

@@ -13,26 +13,22 @@ describe('CircleMode', () => {
   });
 
   describe('onSetup', () => {
-    test('adds an empty circle feature and prepares the UI', () => {
+    test('prepares the UI without creating a feature yet', () => {
       const disableZoom = jest.spyOn(MapboxDraw.lib.doubleClickZoom, 'disable').mockImplementation(() => {});
-      const state = mode.onSetup({});
+      mode.onSetup({});
 
-      expect(mode.newFeature).toHaveBeenCalledWith({
-        type: 'Feature',
-        properties: { isCircle: true, center: [] },
-        geometry: { type: 'Polygon', coordinates: [[]] },
-      });
-      expect(mode.addFeature).toHaveBeenCalledWith(state.polygon);
+      expect(mode.newFeature).not.toHaveBeenCalled();
+      expect(mode.addFeature).not.toHaveBeenCalled();
       expect(mode.clearSelectedFeatures).toHaveBeenCalled();
       expect(disableZoom).toHaveBeenCalledWith(mode);
       expect(mode.updateUIClasses).toHaveBeenCalledWith({ mouse: Constants.cursors.ADD });
       expect(mode.activateUIButton).toHaveBeenCalledWith(Constants.types.POLYGON);
       expect(mode.setActionableState).toHaveBeenCalledWith({ trash: true });
-      expect(state.currentVertexPosition).toBe(0);
     });
 
     test('defaults the radius to 2 km', () => {
       expect(mode.onSetup({}).initialRadiusInKm).toBe(2);
+      expect(mode.onSetup().initialRadiusInKm).toBe(2);
     });
 
     test('takes initialRadiusInKm from the options', () => {
@@ -40,33 +36,66 @@ describe('CircleMode', () => {
     });
   });
 
-  describe('clickAnywhere', () => {
-    test('draws a circle of the initial radius around the click and switches to simple_select', () => {
+  describe('click', () => {
+    test('creates a circle of the initial radius around the click and switches to simple_select', () => {
       const state = mode.onSetup({ initialRadiusInKm: 0.5 });
-      mode.clickAnywhere(state, mouseEvent(center));
+      mode.onClick(state, mouseEvent(center));
 
-      expect(state.polygon.properties).toEqual({ isCircle: true, center, radiusInKm: 0.5 });
-      expectCircleRing(state.polygon.getCoordinates()[0], center, 0.5);
-      expect(mode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT, { featureIds: [state.polygon.id] });
+      expect(state.circle.properties).toEqual({ isCircle: true, center, radiusInKm: 0.5 });
+      expectCircleRing(state.circle.getCoordinates()[0], center, 0.5);
+      expect(mode.addFeature).toHaveBeenCalledWith(state.circle);
+      expect(mode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT, { featureIds: [state.circle.id] });
     });
 
-    test('a second click does not redraw the circle', () => {
-      const state = mode.onSetup({ initialRadiusInKm: 0.5 });
-      mode.clickAnywhere(state, mouseEvent(center));
-      mode.clickAnywhere(state, mouseEvent([0, 0]));
-      expect(state.polygon.properties.center).toEqual(center);
+    test('tap behaves like click', () => {
+      expect(CircleMode.onTap).toBe(CircleMode.onClick);
+    });
+
+    test('a second click does not create another circle', () => {
+      const state = mode.onSetup({});
+      mode.onClick(state, mouseEvent(center));
+      mode.onClick(state, mouseEvent([0, 0]));
+      expect(mode.addFeature).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('onStop (inherited from draw_polygon)', () => {
-    // Known bug, see examples/demo/e2e/BASELINE.md: draw_polygon's onStop removes
-    // coordinate `0.${currentVertexPosition}`, which is ring point 1 of a finished circle.
-    test.failing('keeps all 65 ring points of the created circle', () => {
+  describe('onStop', () => {
+    test('fires draw.create with the full 65-point circle', () => {
+      const enableZoom = jest.spyOn(MapboxDraw.lib.doubleClickZoom, 'enable').mockImplementation(() => {});
       const state = mode.onSetup({ initialRadiusInKm: 0.5 });
-      mode.addFeature(state.polygon);
-      mode.clickAnywhere(state, mouseEvent(center));
+      mode.onClick(state, mouseEvent(center));
       mode.onStop(state);
-      expectCircleRing(state.polygon.getCoordinates()[0], center, 0.5);
+
+      expect(mode.fire).toHaveBeenCalledTimes(1);
+      const [type, { features: [created] }] = mode.fire.mock.calls[0];
+      expect(type).toBe(Constants.events.CREATE);
+      expectCircleRing(created.geometry.coordinates[0], center, 0.5);
+      expect(created.properties).toEqual({ isCircle: true, center, radiusInKm: 0.5 });
+      expect(enableZoom).toHaveBeenCalledWith(mode);
+      expect(mode.updateUIClasses).toHaveBeenLastCalledWith({ mouse: Constants.cursors.NONE });
     });
+
+    test('fires nothing when the mode is left without a click', () => {
+      const state = mode.onSetup({});
+      mode.onStop(state);
+      expect(mode.fire).not.toHaveBeenCalled();
+    });
+
+    test('fires through map.fire on mapbox-gl-draw 1.4, which has no mode.fire', () => {
+      delete mode.fire;
+      const state = mode.onSetup({});
+      mode.onClick(state, mouseEvent(center));
+      mode.onStop(state);
+      expect(mode.map.fire).toHaveBeenCalledWith(Constants.events.CREATE, expect.objectContaining({ features: expect.any(Array) }));
+    });
+  });
+
+  test('Escape and trash leave the mode without creating anything', () => {
+    const state = mode.onSetup({});
+    mode.onKeyUp(state, { key: 'Escape', keyCode: 27 });
+    mode.onTrash(state);
+    expect(mode.changeMode).toHaveBeenCalledTimes(2);
+    expect(mode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT);
+    expect(mode.addFeature).not.toHaveBeenCalled();
   });
 });

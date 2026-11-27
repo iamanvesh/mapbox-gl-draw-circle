@@ -27,7 +27,9 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npm run preview',
     port: PORT,
-    reuseExistingServer: !process.env.CI,
+    // Always start our own build: reusing whatever listens on the port can silently test a
+    // different checkout (e.g. another git worktree). A busy port fails loudly instead.
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

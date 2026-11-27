@@ -1,6 +1,8 @@
+import { jest } from '@jest/globals';
 import { circle } from '@turf/circle';
 import createSupplementaryPointsForCircle from '../../lib/utils/create_supplementary_points_circle.js';
-import shiftCircleCenters from '../../lib/utils/shift_circle_centers.js';
+import { captureCircles, redrawMovedCircles, fireEvent } from '../../lib/utils/circle.js';
+import { FakePolygon, expectCircleRing } from '../helpers.js';
 
 describe('createSupplementaryPointsForCircle', () => {
   const ring = circle([0, 0], 1).geometry.coordinates;
@@ -20,14 +22,51 @@ describe('createSupplementaryPointsForCircle', () => {
   });
 });
 
-describe('shiftCircleCenters', () => {
-  test('shifts circle centers and ignores other features', () => {
-    const c = { properties: { isCircle: true, center: [1, 2] } };
-    const p = { properties: { center: [1, 2] } };
-    const empty = { properties: { isCircle: true, center: [] } };
-    shiftCircleCenters([c, p, empty], { lng: 0.5, lat: -1 });
-    expect(c.properties.center).toEqual([1.5, 1]);
-    expect(p.properties.center).toEqual([1, 2]);
-    expect(empty.properties.center).toEqual([]);
+describe('captureCircles / redrawMovedCircles', () => {
+  const makeCircle = (center, radiusInKm) => new FakePolygon({
+    properties: { isCircle: true, center, radiusInKm },
+    coordinates: circle(center, radiusInKm).geometry.coordinates,
+  });
+  const shift = (f, dLng, dLat) => f.incomingCoords(f.getCoordinates().map((r) => r.map(([x, y]) => [x + dLng, y + dLat])));
+
+  test('ignores non-circles and circles without a center', () => {
+    const square = new FakePolygon({ coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] });
+    const legacy = new FakePolygon({ properties: { isCircle: true }, coordinates: [[[0, 0], [1, 0], [1, 1], [0, 0]]] });
+    expect(captureCircles([square, legacy])).toEqual([]);
+  });
+
+  test('redraws each circle around its center moved by the applied delta', () => {
+    const c = makeCircle([2, 3], 5);
+    const captured = captureCircles([c]);
+    shift(c, 1, 20);
+    redrawMovedCircles(captured);
+    expect(c.properties.center[0]).toBeCloseTo(3, 10);
+    expect(c.properties.center[1]).toBeCloseTo(23, 10);
+    expectCircleRing(c.getCoordinates()[0], c.properties.center, 5);
+  });
+
+  test('moves only the center of a circle without a stored radius', () => {
+    const c = makeCircle([2, 3], 5);
+    delete c.properties.radiusInKm;
+    const captured = captureCircles([c]);
+    shift(c, 1, 1);
+    redrawMovedCircles(captured);
+    expect(c.properties.center[0]).toBeCloseTo(3, 10);
+    expect(c.properties.center[1]).toBeCloseTo(4, 10);
+  });
+});
+
+describe('fireEvent', () => {
+  test('uses mode.fire when present (mapbox-gl-draw >= 1.5)', () => {
+    const mode = { fire: jest.fn(), map: { fire: jest.fn() } };
+    fireEvent(mode, 'draw.create', { features: [] });
+    expect(mode.fire).toHaveBeenCalledWith('draw.create', { features: [] });
+    expect(mode.map.fire).not.toHaveBeenCalled();
+  });
+
+  test('falls back to map.fire (mapbox-gl-draw 1.4)', () => {
+    const mode = { map: { fire: jest.fn() } };
+    fireEvent(mode, 'draw.create', { features: [] });
+    expect(mode.map.fire).toHaveBeenCalledWith('draw.create', { features: [] });
   });
 });

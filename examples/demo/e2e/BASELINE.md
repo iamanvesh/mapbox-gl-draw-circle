@@ -35,3 +35,15 @@ A resize regenerates the full ring, so the resize test passes.
 ## What this means for the upgrade
 
 Any test outside the `knownBug` set that fails after the upgrade is a regression. A `knownBug` test that starts passing makes Playwright report an error; remove its marker in the same change as the fix.
+
+## Status after the 2.0 fixes
+
+Both bugs are fixed, and their `knownBug` markers were removed in the same commit as the fixes. Before the markers came out, all 6 marked tests reported "Expected to fail, but passed".
+
+- **Missing ring point.** The circle modes no longer copy `draw_polygon`. Its `onStop` removed vertex `0.<currentVertexPosition>`, which was ring point 1.
+- **#11, #21.** The drag-mode feature is created on mouse-down and discarded on a click without movement. Draw reports a press and release without movement as `click`, not `mouseup`.
+
+New regression tests cover three more things, and each fails on the pre-fix code:
+- **#24:** a circle moved far north keeps its radius.
+- **Map panning:** leaving `drag_circle` without drawing turns panning back on.
+- **Click in drag mode:** a click without dragging leaves nothing behind.
