@@ -4,11 +4,19 @@ Adds circle drawing and editing to [mapbox-gl-draw](https://github.com/mapbox/ma
 
 ## Demo
 
-##### Circle mode
-![Circle Mode Demo](demo/CircleModeDemo.gif)
+**Click to draw** (`draw_circle`) a circle of a set radius:
 
-##### Drag Circle mode
-![Drag Circle Mode Demo](demo/DragCircleDemo.gif)
+![Drawing circles with a click](https://raw.githubusercontent.com/iamanvesh/mapbox-gl-draw-circle/master/demo/CircleModeDemo.gif)
+
+**Press, drag and release** (`drag_circle`) to draw a circle of any size:
+
+![Drawing circles by dragging](https://raw.githubusercontent.com/iamanvesh/mapbox-gl-draw-circle/master/demo/DragCircleDemo.gif)
+
+**Move and resize** (`simple_select` / `direct_select`): drag a selected circle to move it, then click it again and drag a handle to change the radius:
+
+![Moving and resizing a circle](https://raw.githubusercontent.com/iamanvesh/mapbox-gl-draw-circle/master/demo/EditCircleDemo.gif)
+
+Try it yourself with the [demo app](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/examples/demo/README.md). The basemap is © [OpenFreeMap](https://openfreemap.org), [OpenMapTiles](https://openmaptiles.org) and [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
 
 ## Installation
 
@@ -95,14 +103,14 @@ map.on('draw.create', (e: { features: GeoJSON.Feature[] }) => {
 
 `fixtures/apps/` has working, CI-tested setups for React, Vue, Angular, Next.js and webpack.
 
-- **React:** create the map in `useEffect` and return `() => map.remove()`. `StrictMode` mounts effects twice in development, and without the cleanup you get two maps. See [`fixtures/apps/react-vite`](fixtures/apps/react-vite/src/Map.jsx).
-- **Vue:** create the map in `onMounted` and keep `map` and `draw` in plain variables, not `ref`/`reactive`. Vue's reactive proxies break mapbox-gl internals. See [`fixtures/apps/vue-vite`](fixtures/apps/vue-vite/src/App.vue).
+- **React:** create the map in `useEffect` and return `() => map.remove()`. `StrictMode` mounts effects twice in development, and without the cleanup you get two maps. See [`fixtures/apps/react-vite`](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/fixtures/apps/react-vite/src/Map.jsx).
+- **Vue:** create the map in `onMounted` and keep `map` and `draw` in plain variables, not `ref`/`reactive`. Vue's reactive proxies break mapbox-gl internals. See [`fixtures/apps/vue-vite`](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/fixtures/apps/vue-vite/src/App.vue).
 - **Angular:** mapbox-gl and some of mapbox-gl-draw's dependencies are CommonJS. List them in `angular.json` to silence the build warnings:
   ```json
   "allowedCommonJsDependencies": ["mapbox-gl", "fast-deep-equal", "@mapbox/geojson-normalize", "@mapbox/geojson-area"]
   ```
-  Creating the map inside `NgZone.runOutsideAngular` keeps map events out of change detection. See [`fixtures/apps/angular`](fixtures/apps/angular/src/app/app.component.ts).
-- **Next.js:** top-level imports work in a `'use client'` component. Importing the package during server rendering does not touch `window`. See [`fixtures/apps/next`](fixtures/apps/next/app/Map.jsx).
+  Creating the map inside `NgZone.runOutsideAngular` keeps map events out of change detection. See [`fixtures/apps/angular`](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/fixtures/apps/angular/src/app/app.component.ts).
+- **Next.js:** top-level imports work in a `'use client'` component. Importing the package during server rendering does not touch `window`. See [`fixtures/apps/next`](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/fixtures/apps/next/app/Map.jsx).
 
 ## MapLibre (best effort)
 
@@ -124,7 +132,7 @@ Object.assign(MapboxDraw.constants.classes, {
 const draw = new MapboxDraw({ /* same options as above */ });
 ```
 
-With Vite and maplibre-gl 6, the map may never load ("Worker failed to load"), because maplibre builds its worker URL at runtime. Bundle the worker yourself, as [`examples/demo/src/engine-maplibre.js`](examples/demo/src/engine-maplibre.js) does.
+With Vite and maplibre-gl 6, the map may never load ("Worker failed to load"), because maplibre builds its worker URL at runtime. Bundle the worker yourself, as [`examples/demo/src/engine-maplibre.js`](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/examples/demo/src/engine-maplibre.js) does.
 
 CI runs the browser tests on MapLibre as a non-blocking job.
 
@@ -149,7 +157,7 @@ npm ci && npm test                                       # unit tests (Jest)
 
 The browser tests and fixtures need Chromium once: `npx playwright install chromium`.
 
-`examples/demo` is also the interactive demo; see its [README](examples/demo/README.md) for setup and a manual test checklist. Run `npm run dev` there. Set `VITE_MAPBOX_TOKEN` for a real basemap, or `VITE_MAP_ENGINE=maplibre` to run it on MapLibre.
+`examples/demo` is also the interactive demo; see its [README](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/examples/demo/README.md) for setup and a manual test checklist. Run `npm run dev` there. Set `VITE_MAPBOX_TOKEN` for a real basemap, or `VITE_MAP_ENGINE=maplibre` to run it on MapLibre.
 
 ## License
 
