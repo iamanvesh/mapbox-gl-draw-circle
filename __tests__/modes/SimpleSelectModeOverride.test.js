@@ -1,130 +1,92 @@
-jest.mock('@mapbox/mapbox-gl-draw/src/lib/create_supplementary_points');
-jest.mock('@mapbox/mapbox-gl-draw/src/lib/move_features');
-jest.mock('../../lib/utils/create_supplementary_points_circle');
+import { jest } from '@jest/globals';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import { circle } from '@turf/circle';
+import SimpleSelectMode from '../../lib/modes/SimpleSelectModeOverride.js';
+import { bindMode, mouseEvent, FakePolygon, displayGeojson, expectCircleRing } from '../helpers.js';
 
-const createSupplementaryPoints = require('@mapbox/mapbox-gl-draw/src/lib/create_supplementary_points');
-const moveFeatures = require('@mapbox/mapbox-gl-draw/src/lib/move_features');
-const Constants = require('@mapbox/mapbox-gl-draw/src/constants');
-const createSupplementaryPointsForCircle = require('../../lib/utils/create_supplementary_points_circle');
+const { constants: Constants } = MapboxDraw;
+const center = [-73.9855, 40.758];
 
-let SimpleSelectMode = require('../../lib/modes/SimpleSelectModeOverride');
+const makeCircle = (id = 'c1') => new FakePolygon({
+  id,
+  properties: { isCircle: true, center: [...center], radiusInKm: 0.5 },
+  coordinates: circle(center, 0.5).geometry.coordinates,
+});
 
-describe('SimpleSelectMode tests', () => {
-  let mockState = {};
-  let mockEvent = {};
-  let mockFeatures;
+const makeSquare = () => new FakePolygon({
+  id: 'p1',
+  properties: {},
+  coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+});
 
-  beforeEach(() => {
-    SimpleSelectMode = {
-      ...SimpleSelectMode,
-      getSelected: jest.fn(),
-      isSelected: jest.fn(),
-      fireActionable: jest.fn()
-    };
+describe('SimpleSelectModeOverride', () => {
+  describe('dragMove', () => {
+    test('moves a selected circle and its stored center by the drag delta', () => {
+      const c = makeCircle();
+      const mode = bindMode(SimpleSelectMode, { selected: [c] });
+      const state = { dragMoveLocation: { lng: center[0], lat: center[1] } };
+      const to = [center[0] + 0.01, center[1] + 0.005];
+      mode.dragMove(state, mouseEvent(to));
 
-    mockState = {
-      dragMoving: false,
-      dragMoveLocation: {
-        lat: 1,
-        lng: 1
-      }
-    };
+      expect(c.properties.center[0]).toBeCloseTo(to[0], 10);
+      expect(c.properties.center[1]).toBeCloseTo(to[1], 10);
+      // Translating in lng/lat keeps the ring centered; distances stay within 0.5%.
+      const ring = c.getCoordinates()[0];
+      expect(ring).toHaveLength(65);
+      expect(state.dragMoving).toBe(true);
+      expect(state.dragMoveLocation).toEqual({ lng: to[0], lat: to[1] });
+    });
 
-    mockEvent = {
-      originalEvent: {
-        stopPropagation: jest.fn()
-      },
-      lngLat: {
-        lng: 2,
-        lat: 2
-      }
-    };
-
-    mockFeatures = [
-      {
-        properties: {
-          isCircle: true,
-          center: [0, 0]
-        }
-      }
-    ];
-
-    SimpleSelectMode.getSelected.mockReturnValue(mockFeatures);
+    test('moves non-circle features without touching properties', () => {
+      const p = makeSquare();
+      const mode = bindMode(SimpleSelectMode, { selected: [p] });
+      mode.dragMove({ dragMoveLocation: { lng: 0, lat: 0 } }, mouseEvent([1, 1]));
+      expect(p.getCoordinates()[0]).toEqual([[1, 1], [2, 1], [2, 2], [1, 2], [1, 1]]);
+      expect(p.properties).toEqual({});
+    });
   });
 
-  afterEach(() => {
-    createSupplementaryPoints.mockClear();
-    createSupplementaryPointsForCircle.mockClear();
-    moveFeatures.mockClear();
+  describe('toDisplayFeatures', () => {
+    test('a selected circle is shown active with 4 resize handles', () => {
+      const c = makeCircle();
+      const mode = bindMode(SimpleSelectMode, { selected: [c] });
+      const display = jest.fn();
+      const geojson = displayGeojson(c);
+      mode.toDisplayFeatures({}, geojson, display);
+
+      expect(geojson.properties.active).toBe(Constants.activeStates.ACTIVE);
+      const [shown, ...handles] = display.mock.calls.map(([f]) => f);
+      expect(shown).toBe(geojson);
+      expect(handles.map((h) => h.properties.coord_path)).toEqual(['0.0', '0.16', '0.32', '0.48']);
+      expect(handles.every((h) => h.properties.meta === Constants.meta.VERTEX)).toBe(true);
+      expect(mode.fireActionable).toHaveBeenCalled();
+    });
+
+    test('an unselected circle is shown inactive without handles', () => {
+      const mode = bindMode(SimpleSelectMode);
+      const display = jest.fn();
+      const geojson = displayGeojson(makeCircle());
+      mode.toDisplayFeatures({}, geojson, display);
+      expect(geojson.properties.active).toBe(Constants.activeStates.INACTIVE);
+      expect(display).toHaveBeenCalledTimes(1);
+    });
+
+    test('non-circle features render exactly as upstream simple_select does', () => {
+      const p = makeSquare();
+      const ours = jest.fn();
+      const theirs = jest.fn();
+      bindMode(SimpleSelectMode, { selected: [p] }).toDisplayFeatures({}, displayGeojson(p), ours);
+      bindMode(MapboxDraw.modes.simple_select, { selected: [p] }).toDisplayFeatures({}, displayGeojson(p), theirs);
+      expect(ours.mock.calls).toEqual(theirs.mock.calls);
+      expect(ours.mock.calls.length).toBeGreaterThan(1);
+    });
   });
 
-  it('should move selected features when dragMove is invoked', () => {
-    SimpleSelectMode.dragMove(mockState, mockEvent);
-    expect(mockState.dragMoving).toEqual(true);
-    expect(mockEvent.originalEvent.stopPropagation).toHaveBeenCalled();
-    expect(moveFeatures).toHaveBeenCalledWith(mockFeatures, { lng: 1, lat: 1 });
-  });
-
-  it('should update center of the circle feature when dragMove is invoked', () => {
-    SimpleSelectMode.dragMove(mockState, mockEvent);
-    expect(mockFeatures[0].properties.center).toEqual([1, 1]);
-  });
-
-  it('should display points generated using createSupplementaryPointsForCircle', () => {
-    SimpleSelectMode.isSelected.mockReturnValue(true);
-    createSupplementaryPointsForCircle.mockReturnValue([{}]);
-    const mockGeoJSON = {
-      geometry: {
-        type: 'Polygon'
-      },
-      properties: {
-        user_isCircle: true
-      }
-    };
-    const mockDisplay = jest.fn();
-    SimpleSelectMode.toDisplayFeatures(mockState, mockGeoJSON, mockDisplay);
-    expect(SimpleSelectMode.fireActionable).toHaveBeenCalled();
-    expect(mockDisplay.mock.calls).toEqual([
-      [mockGeoJSON],
-      [{}, 0, [ {} ]] // second and third elements are passed by Array.forEach
-    ]);
-  });
-
-  it('should not generate supplementary vertices if the feature is not active', () => {
-    SimpleSelectMode.isSelected.mockReturnValue(false)
-    const mockGeoJSON = {
-      geometry: {
-        type: 'Polygon'
-      },
-      properties: {
-        user_isCircle: true,
-      }
-    };
-    const mockDisplay = jest.fn();
-    SimpleSelectMode.toDisplayFeatures(mockState, mockGeoJSON, mockDisplay);
-    expect(SimpleSelectMode.fireActionable).toHaveBeenCalled();
-    expect(mockDisplay).toHaveBeenCalledWith(mockGeoJSON);
-    expect(createSupplementaryPointsForCircle).not.toHaveBeenCalled();
-  });
-
-  it('should generate supplementary vertices using createSupplementaryVertices if the feature is not a circle', () => {
-    SimpleSelectMode.isSelected.mockReturnValue(true);
-    createSupplementaryPoints.mockReturnValue([{}]);
-    const mockGeoJSON = {
-      geometry: {
-        type: 'Polygon'
-      },
-      properties: {
-        user_isCircle: false,
-      }
-    };
-    const mockDisplay = jest.fn();
-    SimpleSelectMode.toDisplayFeatures(mockState, mockGeoJSON, mockDisplay);
-    expect(SimpleSelectMode.fireActionable).toHaveBeenCalled();
-    expect(createSupplementaryPoints).toHaveBeenCalledWith(mockGeoJSON);
-    expect(mockDisplay.mock.calls).toEqual([
-      [mockGeoJSON],
-      [{}, 0, [ {} ]] // second and third elements are passed by Array.forEach
-    ]);
+  test('a moved circle is still a valid circle around its new center', () => {
+    const c = makeCircle();
+    const mode = bindMode(SimpleSelectMode, { selected: [c] });
+    // Small move: lng/lat translation keeps distances within the 3-decimal tolerance.
+    mode.dragMove({ dragMoveLocation: { lng: center[0], lat: center[1] } }, mouseEvent([center[0] + 0.001, center[1]]));
+    expectCircleRing(c.getCoordinates()[0], c.properties.center, 0.5);
   });
 });

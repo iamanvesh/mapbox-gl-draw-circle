@@ -1,138 +1,72 @@
-jest.mock('@mapbox/mapbox-gl-draw/src/lib/double_click_zoom', () => ({
-  enable: jest.fn(),
-  disable: jest.fn()
-}));
+import { jest } from '@jest/globals';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import CircleMode from '../../lib/modes/CircleMode.js';
+import { bindMode, mouseEvent, expectCircleRing } from '../helpers.js';
 
-jest.mock('@turf/circle', () => ({
-  default: jest.fn()
-}));
+const { constants: Constants } = MapboxDraw;
+const center = [-73.9855, 40.758];
 
-let CircleMode = require('../../lib/modes/CircleMode');
-const mockFeature = {
-  "type": "Feature",
-  "properties": {},
-  "geometry": {
-    "type": "Polygon",
-    "coordinates": []
-  }
-};
-const doubleClickZoom = require('@mapbox/mapbox-gl-draw/src/lib/double_click_zoom');
-const Constants = require('@mapbox/mapbox-gl-draw/src/constants');
-const circle = require('@turf/circle');
-
-describe('CircleMode tests', () => {
+describe('CircleMode', () => {
+  let mode;
   beforeEach(() => {
-    CircleMode = {
-      ...CircleMode,
-      addFeature: jest.fn(),
-      newFeature: jest.fn(),
-      clearSelectedFeatures: jest.fn(),
-      updateUIClasses: jest.fn(),
-      activateUIButton: jest.fn(),
-      setActionableState: jest.fn(),
-      changeMode: jest.fn()
-    }
+    mode = bindMode(CircleMode);
   });
 
-  afterEach(() => {
-    CircleMode.changeMode.mockClear();
-  });
+  describe('onSetup', () => {
+    test('adds an empty circle feature and prepares the UI', () => {
+      const disableZoom = jest.spyOn(MapboxDraw.lib.doubleClickZoom, 'disable').mockImplementation(() => {});
+      const state = mode.onSetup({});
 
-  it('should setup state with a polygon and initialRadius', () => {
-    CircleMode.newFeature.mockReturnValue(mockFeature);
-    expect(CircleMode.onSetup({})).toEqual({
-      initialRadiusInKm: 2,
-      polygon: mockFeature,
-      currentVertexPosition: 0
+      expect(mode.newFeature).toHaveBeenCalledWith({
+        type: 'Feature',
+        properties: { isCircle: true, center: [] },
+        geometry: { type: 'Polygon', coordinates: [[]] },
+      });
+      expect(mode.addFeature).toHaveBeenCalledWith(state.polygon);
+      expect(mode.clearSelectedFeatures).toHaveBeenCalled();
+      expect(disableZoom).toHaveBeenCalledWith(mode);
+      expect(mode.updateUIClasses).toHaveBeenCalledWith({ mouse: Constants.cursors.ADD });
+      expect(mode.activateUIButton).toHaveBeenCalledWith(Constants.types.POLYGON);
+      expect(mode.setActionableState).toHaveBeenCalledWith({ trash: true });
+      expect(state.currentVertexPosition).toBe(0);
     });
-    expect(CircleMode.newFeature).toHaveBeenCalled();
-  });
 
-  it('should setup state with initialRadius as given in options', () => {
-    CircleMode.newFeature.mockReturnValue(mockFeature);
-    expect(CircleMode.onSetup({ initialRadiusInKm: 1 })).toEqual({
-      initialRadiusInKm: 1,
-      polygon: mockFeature,
-      currentVertexPosition: 0
+    test('defaults the radius to 2 km', () => {
+      expect(mode.onSetup({}).initialRadiusInKm).toBe(2);
     });
-    expect(CircleMode.newFeature).toHaveBeenCalled();
-  });
 
-  it('should add feature onSetup', () => {
-    CircleMode.newFeature.mockReturnValue(mockFeature);
-    CircleMode.onSetup({});
-    expect(CircleMode.addFeature).toHaveBeenCalledWith(mockFeature);
-  });
-
-  it('should clear selected features on setup', () => {
-    CircleMode.onSetup({});
-    expect(CircleMode.clearSelectedFeatures).toHaveBeenCalled();
-  });
-
-  it('should disable double click zoom on setup', () => {
-    CircleMode.onSetup({});
-    expect(doubleClickZoom.disable).toHaveBeenCalled();
-  });
-
-  it('should set the cursor to "add" button', () => {
-    CircleMode.onSetup({});
-    expect(CircleMode.updateUIClasses).toHaveBeenCalledWith({
-      mouse: Constants.cursors.ADD
+    test('takes initialRadiusInKm from the options', () => {
+      expect(mode.onSetup({ initialRadiusInKm: 0.5 }).initialRadiusInKm).toBe(0.5);
     });
   });
 
-  it('should activate the polygon button on ui', () => {
-    CircleMode.onSetup({});
-    expect(CircleMode.activateUIButton).toHaveBeenCalledWith(Constants.types.POLYGON);
-  });
+  describe('clickAnywhere', () => {
+    test('draws a circle of the initial radius around the click and switches to simple_select', () => {
+      const state = mode.onSetup({ initialRadiusInKm: 0.5 });
+      mode.clickAnywhere(state, mouseEvent(center));
 
-  it('should set actionable state by enabling trash', () => {
-    CircleMode.onSetup({});
-    expect(CircleMode.setActionableState).toHaveBeenCalledWith({
-      trash: true
+      expect(state.polygon.properties).toEqual({ isCircle: true, center, radiusInKm: 0.5 });
+      expectCircleRing(state.polygon.getCoordinates()[0], center, 0.5);
+      expect(mode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT, { featureIds: [state.polygon.id] });
+    });
+
+    test('a second click does not redraw the circle', () => {
+      const state = mode.onSetup({ initialRadiusInKm: 0.5 });
+      mode.clickAnywhere(state, mouseEvent(center));
+      mode.clickAnywhere(state, mouseEvent([0, 0]));
+      expect(state.polygon.properties.center).toEqual(center);
     });
   });
 
-  it('should generate a circle feature and change mode to simple select when clickAnywhere is invoked', () => {
-    circle.default.mockReturnValue({
-      geometry: {
-        coordinates: []
-      }
+  describe('onStop (inherited from draw_polygon)', () => {
+    // Known bug, see examples/demo/e2e/BASELINE.md: draw_polygon's onStop removes
+    // coordinate `0.${currentVertexPosition}`, which is ring point 1 of a finished circle.
+    test.failing('keeps all 65 ring points of the created circle', () => {
+      const state = mode.onSetup({ initialRadiusInKm: 0.5 });
+      mode.addFeature(state.polygon);
+      mode.clickAnywhere(state, mouseEvent(center));
+      mode.onStop(state);
+      expectCircleRing(state.polygon.getCoordinates()[0], center, 0.5);
     });
-    const mockState = {
-      currentVertexPosition: 0,
-      initialRadiusInKm: 1,
-      polygon: {
-        id: 'random_id',
-        incomingCoords: jest.fn(),
-        properties: {}
-      }
-    };
-    const mockEvent = {
-      lngLat: { lat: 0, lng: 0 }
-    };
-
-    CircleMode.clickAnywhere(mockState, mockEvent);
-    expect(mockState.currentVertexPosition).toBe(1);
-    expect(circle.default).toHaveBeenCalledWith([0, 0], 1);
-    expect(CircleMode.changeMode).toHaveBeenCalledWith(
-      Constants.modes.SIMPLE_SELECT, { featureIds: [mockState.polygon.id] }
-    );
-  });
-
-  it('should change mode to simple_select without adding a polygon to state if currentVertexPosition is not 0', () => {
-    const mockState = {
-      currentVertexPosition: 1,
-      polygon: {}
-    };
-    const mockEvent = {
-      lngLat: { lat: 0, lng: 0 }
-    };
-
-    CircleMode.clickAnywhere(mockState, mockEvent);
-    expect(mockState.currentVertexPosition).toBe(1);
-    expect(CircleMode.changeMode).toHaveBeenCalledWith(
-      Constants.modes.SIMPLE_SELECT, { featureIds: [mockState.polygon.id] }
-    )
   });
 });

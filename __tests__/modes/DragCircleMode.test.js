@@ -1,249 +1,118 @@
-jest.mock('@mapbox/mapbox-gl-draw/src/lib/double_click_zoom', () => ({
-  enable: jest.fn(),
-  disable: jest.fn()
-}));
+import { jest } from '@jest/globals';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import DragCircleMode from '../../lib/modes/DragCircleMode.js';
+import { bindMode, mouseEvent, expectCircleRing, distanceKm } from '../helpers.js';
 
-jest.mock('@turf/circle', () => ({
-  default: jest.fn()
-}));
+const { constants: Constants } = MapboxDraw;
+const center = [-73.9855, 40.758];
+const edge = [-73.975, 40.762];
 
-jest.mock('@turf/distance', () => ({
-  default: jest.fn()
-}));
-
-jest.mock('../../lib/utils/drag_pan', () => ({
-  enable: jest.fn(),
-  disable: jest.fn()
-}));
-
-let DragCircleMode = require('../../lib/modes/DragCircleMode');
-const mockFeature = {
-  "type": "Feature",
-  "properties": {},
-  "geometry": {
-    "type": "Polygon",
-    "coordinates": []
-  }
-};
-const doubleClickZoom = require('@mapbox/mapbox-gl-draw/src/lib/double_click_zoom');
-const Constants = require('@mapbox/mapbox-gl-draw/src/constants');
-const circle = require('@turf/circle');
-const dragPan = require('../../lib/utils/drag_pan');
-const distance = require('@turf/distance');
-
-describe('DragCircleMode', function () {
-
-
+describe('DragCircleMode', () => {
+  let mode;
   beforeEach(() => {
-    DragCircleMode = {
-      ...DragCircleMode,
-      addFeature: jest.fn(),
-      newFeature: jest.fn(),
-      clearSelectedFeatures: jest.fn(),
-      updateUIClasses: jest.fn(),
-      activateUIButton: jest.fn(),
-      setActionableState: jest.fn(),
-      changeMode: jest.fn()
-    }
+    jest.useFakeTimers();
+    mode = bindMode(DragCircleMode);
   });
-
   afterEach(() => {
-    DragCircleMode.changeMode.mockClear();
+    jest.useRealTimers();
   });
 
-  it('should setup state with a polygon', () => {
-    DragCircleMode.newFeature.mockReturnValue(mockFeature);
-    expect(DragCircleMode.onSetup({})).toEqual({
-      polygon: mockFeature,
-      currentVertexPosition: 0
-    });
-    expect(DragCircleMode.addFeature).toHaveBeenCalledWith(mockFeature);
+  test('onSetup adds an empty circle feature and disables double-click zoom and drag pan', () => {
+    const disableZoom = jest.spyOn(MapboxDraw.lib.doubleClickZoom, 'disable').mockImplementation(() => {});
+    const state = mode.onSetup({});
+    jest.runAllTimers();
+
+    expect(state.polygon.properties).toEqual({ isCircle: true, center: [] });
+    expect(mode.addFeature).toHaveBeenCalledWith(state.polygon);
+    expect(disableZoom).toHaveBeenCalledWith(mode);
+    expect(mode.map.dragPan.disable).toHaveBeenCalled();
+    expect(mode.updateUIClasses).toHaveBeenCalledWith({ mouse: Constants.cursors.ADD });
+    expect(mode.setActionableState).toHaveBeenCalledWith({ trash: true });
   });
 
-  it('should clear selected features on setup', () => {
-    DragCircleMode.onSetup({});
-    expect(DragCircleMode.clearSelectedFeatures).toHaveBeenCalled();
+  test('mouse down sets the center once', () => {
+    const state = mode.onSetup({});
+    mode.onMouseDown(state, mouseEvent(center));
+    mode.onMouseDown(state, mouseEvent(edge));
+    expect(state.polygon.properties.center).toEqual(center);
   });
 
-  it('should disable double click zoom on setup', () => {
-    DragCircleMode.onSetup({});
-    expect(doubleClickZoom.disable).toHaveBeenCalled();
+  test('touch start behaves like mouse down', () => {
+    expect(DragCircleMode.onTouchStart).toBe(DragCircleMode.onMouseDown);
   });
 
-  it('should disable dragPan on setup', function () {
-    DragCircleMode.onSetup({});
-    expect(dragPan.disable).toHaveBeenCalled();
+  test('dragging sets the radius to the distance from the center', () => {
+    const state = mode.onSetup({});
+    mode.onMouseDown(state, mouseEvent(center));
+    mode.onDrag(state, mouseEvent(edge));
+
+    const radius = distanceKm(center, edge);
+    expect(state.polygon.properties.radiusInKm).toBeCloseTo(radius, 6);
+    expectCircleRing(state.polygon.getCoordinates()[0], center, radius);
   });
 
-  it('should update the center when onMouseDown is fired', function () {
-    const state = {
-      polygon: {
-        properties: {
-          center: []
-        }
-      }
-    };
-
-    const e = {
-      lngLat: {
-        lat: 1,
-        lng: 2
-      }
-    };
-    DragCircleMode.onMouseDown(state, e);
-    expect(state).toEqual({
-      polygon: {
-        properties: {
-          center: [2, 1]
-        }
-      }
-    })
+  test('moving the mouse before pressing does nothing', () => {
+    const state = mode.onSetup({});
+    mode.onMouseMove(state, mouseEvent(edge));
+    expect(state.polygon.properties.radiusInKm).toBeUndefined();
+    expect(state.polygon.getCoordinates()).toEqual([[]]);
   });
 
-  it('should update the center when onTouchStart is fired', function () {
-    const state = {
-      polygon: {
-        properties: {
-          center: []
-        }
-      }
-    };
+  test('mouse up re-enables drag pan and selects the circle', () => {
+    const state = mode.onSetup({});
+    jest.runAllTimers();
+    mode.onMouseDown(state, mouseEvent(center));
+    mode.onDrag(state, mouseEvent(edge));
+    mode.onMouseUp(state);
+    jest.runAllTimers();
 
-    const e = {
-      lngLat: {
-        lat: 1,
-        lng: 2
-      }
-    };
-    DragCircleMode.onTouchStart(state, e);
-    expect(state).toEqual({
-      polygon: {
-        properties: {
-          center: [2, 1]
-        }
-      }
-    })
+    expect(mode.map.dragPan.enable).toHaveBeenCalled();
+    expect(mode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT, { featureIds: [state.polygon.id] });
   });
 
-  it('should discard the circle if its a click event', function () {
-    const state = {
-      polygon: {
-        properties: {
-          center: [2, 1]
-        }
-      }
-    };
-    DragCircleMode.onClick(state, {});
-    expect(state).toEqual({
-      polygon: {
-        properties: {
-          center: []
-        }
-      }
-    })
+  test('mouse up leaves drag pan disabled when draw was configured with dragPan: false', () => {
+    const state = mode.onSetup({});
+    mode._ctx.store.getInitialConfigValue.mockReturnValue(false);
+    mode.onMouseUp(state);
+    jest.runAllTimers();
+    expect(mode.map.dragPan.enable).not.toHaveBeenCalled();
   });
 
-  it('should discard the circle if its a tap event', function () {
-    const state = {
-      polygon: {
-        properties: {
-          center: [2, 1]
-        }
-      }
-    };
-    DragCircleMode.onTap(state, {});
-    expect(state).toEqual({
-      polygon: {
-        properties: {
-          center: []
-        }
-      }
-    })
+  test('a click resets the center', () => {
+    const state = mode.onSetup({});
+    mode.onMouseDown(state, mouseEvent(center));
+    mode.onClick(state);
+    expect(state.polygon.properties.center).toEqual([]);
   });
 
-  it('should finish drawing if onMouseUp is fired', function () {
-    const state = {
-      polygon: {
-        id: 'test-id',
-      }
-    };
-    DragCircleMode.onMouseUp(state, {});
-    expect(dragPan.disable).toHaveBeenCalled();
-    expect(DragCircleMode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT,
-      {featureIds: ['test-id']})
-  });
-
-  it('should finish drawing if onTouchEnd is fired', function () {
-    const state = {
-      polygon: {
-        id: 'test-id',
-      }
-    };
-    DragCircleMode.onTouchEnd(state, {});
-    expect(dragPan.disable).toHaveBeenCalled();
-    expect(DragCircleMode.changeMode).toHaveBeenCalledWith(Constants.modes.SIMPLE_SELECT,
-      {featureIds: ['test-id']})
-  });
-
-  it('should should set active state and display features', function () {
-    const state = {
-      polygon: {
-        id: 'test-id'
-      }
-    };
-
-    const geojson = {
-      properties: {
-        id: 'test-id'
-      }
-    };
-
+  test('toDisplayFeatures marks only the circle being drawn as active', () => {
+    const state = mode.onSetup({});
     const display = jest.fn();
-
-    DragCircleMode.toDisplayFeatures(state, geojson, display);
-    expect(geojson.properties.active).toEqual(Constants.activeStates.ACTIVE);
-    expect(display).toHaveBeenCalledWith(geojson);
+    const own = { properties: { id: state.polygon.id } };
+    const other = { properties: { id: 'other' } };
+    mode.toDisplayFeatures(state, own, display);
+    mode.toDisplayFeatures(state, other, display);
+    expect(own.properties.active).toBe(Constants.activeStates.ACTIVE);
+    expect(other.properties.active).toBe(Constants.activeStates.INACTIVE);
+    expect(display).toHaveBeenCalledTimes(2);
   });
 
-  it('should adjust the geometry when onDrag is fired', function () {
-    distance.default.mockReturnValue(2);
-    circle.default.mockReturnValue({
-      geometry: {
-        coordinates: [12, 2]
-      }
-    });
-    const state = {
-      polygon: {
-        properties: {
-          center: [1, 2],
-          radiusInKm: 1
-        },
-        incomingCoords: jest.fn()
-      }
-    };
-    DragCircleMode.onDrag(state, { lngLat: { lat: 1, lng: 2}});
-    expect(state.polygon.incomingCoords).toHaveBeenCalledWith([12, 2])
-    expect(state.polygon.properties.radiusInKm).toEqual(2);
+  // Known bug, see examples/demo/e2e/BASELINE.md (same cause as CircleMode).
+  test.failing('the finished circle keeps all 65 ring points after onStop', () => {
+    const state = mode.onSetup({});
+    mode.onMouseDown(state, mouseEvent(center));
+    mode.onDrag(state, mouseEvent(edge));
+    mode.onMouseUp(state);
+    mode.onStop(state);
+    expectCircleRing(state.polygon.getCoordinates()[0], center, distanceKm(center, edge));
   });
 
-  it('should adjust the geometry when onMouseMove is fired', function () {
-    distance.default.mockReturnValue(2);
-    circle.default.mockReturnValue({
-      geometry: {
-        coordinates: [12, 2]
-      }
-    });
-    const state = {
-      polygon: {
-        properties: {
-          center: [1, 2],
-          radiusInKm: 1
-        },
-        incomingCoords: jest.fn()
-      }
-    };
-    DragCircleMode.onMouseMove(state, { lngLat: { lat: 1, lng: 2}});
-    expect(state.polygon.incomingCoords).toHaveBeenCalledWith([12, 2])
-    expect(state.polygon.properties.radiusInKm).toEqual(2);
+  test('a click without dragging deletes the empty feature on stop (#11, #21)', () => {
+    const state = mode.onSetup({});
+    mode.onMouseDown(state, mouseEvent(center));
+    mode.onMouseUp(state);
+    mode.onStop(state);
+    expect(mode.getFeature(state.polygon.id)).toBeUndefined();
+    expect(mode.fire).not.toHaveBeenCalledWith(Constants.events.CREATE, expect.anything());
   });
 });

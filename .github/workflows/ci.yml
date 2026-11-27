@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Weekly run against the newest @mapbox/mapbox-gl-draw, to catch upstream breakage early.
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
@@ -15,37 +18,63 @@ concurrency:
 
 jobs:
   unit:
-    name: Unit tests
+    name: Unit (node ${{ matrix.node }}, draw ${{ matrix.draw }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Supported Node versions on the pinned draw version...
+          - { node: 20, draw: 1.5.2 }
+          - { node: 22, draw: 1.5.2 }
+          - { node: 24, draw: 1.5.2 }
+          # ...and the supported draw range (peerDependency >=1.4.0) on current Node.
+          - { node: 24, draw: 1.4.0 }
+          - { node: 24, draw: 1.4.3 }
+          - { node: 24, draw: 1.5.0 }
+          - { node: 24, draw: latest }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+      - name: Use @mapbox/mapbox-gl-draw@${{ matrix.draw }}
+        run: npm install --no-save @mapbox/mapbox-gl-draw@${{ matrix.draw }}
       - run: npm test
 
   e2e:
-    name: Browser tests (mapbox-gl v3)
+    name: Browser (mapbox-gl v3, draw ${{ matrix.draw }})
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: examples/demo
+    strategy:
+      fail-fast: false
+      matrix:
+        draw: [1.4.3, 1.5.2, latest]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: examples/demo/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            examples/demo/package-lock.json
+      # Root install provides the plugin's own dependencies (turf) to the linked package.
       - run: npm ci
+      - run: npm ci
+        working-directory: examples/demo
+      - name: Use @mapbox/mapbox-gl-draw@${{ matrix.draw }}
+        run: npm install --no-save @mapbox/mapbox-gl-draw@${{ matrix.draw }}
+        working-directory: examples/demo
       - run: npx playwright install --with-deps chromium
+        working-directory: examples/demo
       - run: npx playwright test
+        working-directory: examples/demo
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-draw-${{ matrix.draw }}
           path: |
             examples/demo/playwright-report/
             examples/demo/test-results/

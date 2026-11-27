@@ -2,38 +2,63 @@
   "name": "mapbox-gl-draw-circle",
   "version": "1.1.2",
   "description": "A module to draw a circle using mapbox-gl-draw",
-  "main": "index",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "lib/"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": "^18.0.0 || >=20.0.0"
+  },
   "scripts": {
-    "test": "jest --all",
-    "coverage": "jest --all --coverage"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
   },
   "keywords": [
     "mapbox",
+    "mapbox-gl",
+    "mapbox-gl-draw",
     "geojson",
     "circle",
-    "mapbox",
     "draw"
   ],
   "author": "Anvesh Kumar Arrabochu",
   "license": "MIT",
+  "peerDependencies": {
+    "@mapbox/mapbox-gl-draw": ">=1.4.0"
+  },
   "dependencies": {
-    "@mapbox/mapbox-gl-draw": "1.1.1",
-    "@turf/along": "^6.0.1",
-    "@turf/circle": "^6.0.1",
-    "@turf/distance": "^6.0.1",
-    "@turf/helpers": "^6.1.4",
-    "@turf/length": "^6.0.2"
+    "@turf/circle": "^7.4.0",
+    "@turf/distance": "^7.4.0",
+    "@turf/helpers": "^7.4.0"
   },
   "devDependencies": {
-    "jest": "^24.5.0"
+    "@mapbox/mapbox-gl-draw": "1.5.2",
+    "jest": "^30.5.2"
+  },
+  "jest": {
+    "roots": [
+      "<rootDir>/__tests__"
+    ],
+    "testMatch": [
+      "**/*.test.js"
+    ],
+    "testEnvironment": "node",
+    "transform": {},
+    "restoreMocks": true
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/iamanvesh/mapbox-gl-draw-circle"
   },
-  "jest": {
-    "roots": [
-      "<rootDir>/__tests__"
-    ]
-  }
+  "bugs": {
+    "url": "https://github.com/iamanvesh/mapbox-gl-draw-circle/issues"
+  },
+  "homepage": "https://github.com/iamanvesh/mapbox-gl-draw-circle#readme"
 }
