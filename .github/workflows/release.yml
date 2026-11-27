@@ -1,23 +1,28 @@
 name: Release
 
-# Manual release to npm. Run it from the Actions tab: "Release" → "Run workflow" on master.
+# Manual release to npm with staged publishing. Run it from the Actions tab: "Release" →
+# "Run workflow" on master. Full instructions: RELEASING.md.
 #
 # Before running it, commit to master:
 #   1. the new version in package.json (npm version <x.y.z> --no-git-tag-version), and
 #   2. a "## [x.y.z] - YYYY-MM-DD" section in CHANGELOG.md (used as the GitHub release notes).
 #
 # The workflow then:
-#   - checks the version isn't on npm yet, the tag doesn't exist, and the CHANGELOG has the section;
+#   - checks the version isn't on npm yet and has no tag or GitHub release;
 #   - runs the full CI suite (unit matrix, browser tests, consumer fixtures) on the exact commit;
-#   - dry run (default): packs the package and prints what would be published, then stops;
-#   - real run: waits for approval on the `npm-release` environment, publishes with npm trusted
-#     publishing (OIDC, no token; provenance attached), then tags vX.Y.Z and creates the GitHub release.
+#   - dry run (default): packs the package and prints what would be staged, then stops;
+#   - real run: stages the version on npm with `npm stage publish` (trusted publishing, OIDC, no
+#     token; provenance attached) and creates a *draft* GitHub release. Nothing is public yet.
+#
+# The maintainer then approves on npm with 2FA (`npm stage approve <id>`), which makes the version
+# live, and publishes the draft GitHub release, which creates the vX.Y.Z tag. CI can only stage:
+# a compromised workflow or GitHub account cannot release without the maintainer's npm 2FA.
 
 on:
   workflow_dispatch:
     inputs:
       dry-run:
-        description: Dry run (pack and validate only, nothing is published)
+        description: Dry run (pack and validate only, nothing is staged)
         type: boolean
         default: true
       dist-tag:
@@ -47,9 +52,10 @@ jobs:
         with:
           node-version: 24
       - id: check
-        name: Check branch, version, tag and changelog
+        name: Check branch, version, tag, release and changelog
         env:
           DIST_TAG: ${{ inputs.dist-tag }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           fail() { echo "::error::$1"; exit 1; }
@@ -66,6 +72,9 @@ jobs:
           if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
             fail "Tag v$version already exists."
           fi
+          if gh release view "v$version" >/dev/null 2>&1; then
+            fail "A GitHub release (possibly a draft) for v$version already exists. Delete it or bump the version."
+          fi
           grep -q "^## \[$version\]" CHANGELOG.md || fail "CHANGELOG.md has no '## [$version]' section."
 
           case "$version" in
@@ -80,7 +89,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   dry-run:
-    name: Dry run (nothing published)
+    name: Dry run (nothing staged)
     if: inputs.dry-run
     needs: [prepare, test]
     runs-on: ubuntu-latest
@@ -94,23 +103,25 @@ jobs:
       - name: Release notes
         run: node .github/scripts/release-notes.mjs "${{ needs.prepare.outputs.version }}"
       - name: Summary
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          DIST_TAG: ${{ inputs.dist-tag }}
         run: |
           {
-            echo "### Dry run passed for v${{ needs.prepare.outputs.version }}"
-            echo "Re-run with **Dry run** unchecked to publish with dist-tag \`${{ inputs.dist-tag }}\`."
+            echo "### Dry run passed for v$VERSION"
+            echo "Re-run with **Dry run** unchecked to stage it on npm with dist-tag \`$DIST_TAG\`."
           } >> "$GITHUB_STEP_SUMMARY"
 
-  publish:
-    name: Publish to npm
+  stage:
+    name: Stage on npm
     if: ${{ !inputs.dry-run }}
     needs: [prepare, test]
     runs-on: ubuntu-latest
-    # Required reviewers on this environment make the run pause for approval here.
-    environment:
-      name: npm-release
-      url: https://www.npmjs.com/package/mapbox-gl-draw-circle/v/${{ needs.prepare.outputs.version }}
+    # Must match the environment set on npm's trusted publisher. Its deployment-branch rule keeps
+    # the npm OIDC trust usable only from master.
+    environment: npm-release
     permissions:
-      contents: write # create the tag and GitHub release
+      contents: write # create the draft GitHub release
       id-token: write # npm trusted publishing (OIDC) and provenance
     steps:
       - uses: actions/checkout@v5
@@ -118,11 +129,13 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      # Trusted publishing needs npm >= 11.5.1.
+      # Staged publishing with trusted publishing needs a current npm.
       - run: npm install -g npm@latest && npm --version
-      - name: Publish
-        run: npm publish --access public --tag "${{ inputs.dist-tag }}"
-      - name: Tag and GitHub release
+      - name: Stage
+        env:
+          DIST_TAG: ${{ inputs.dist-tag }}
+        run: npm stage publish --access public --provenance --tag "$DIST_TAG"
+      - name: Draft GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.prepare.outputs.version }}
@@ -131,9 +144,23 @@ jobs:
           node .github/scripts/release-notes.mjs "$VERSION" > notes.md
           prerelease=""
           case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
-          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md $prerelease
+          # A draft creates no tag yet; vX.Y.Z is created when the draft is published.
+          gh release create "v$VERSION" --draft --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md $prerelease
+      - name: Next steps
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
           {
-            echo "### Published mapbox-gl-draw-circle@$VERSION"
-            echo "- npm: https://www.npmjs.com/package/mapbox-gl-draw-circle/v/$VERSION (dist-tag \`${{ inputs.dist-tag }}\`)"
-            echo "- GitHub release: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/v$VERSION"
+            echo "### Staged mapbox-gl-draw-circle@$VERSION (not public yet)"
+            echo ""
+            echo "On your machine, logged in to npm as a maintainer:"
+            echo ""
+            echo '```sh'
+            echo "npm stage list mapbox-gl-draw-circle      # find the stage id for $VERSION"
+            echo "npm stage download <stage-id>             # optional: inspect the tarball"
+            echo "npm stage approve <stage-id>              # asks for 2FA, then $VERSION is live"
+            echo "gh release edit v$VERSION --draft=false   # publish the GitHub release and create the tag"
+            echo '```'
+            echo ""
+            echo "To abandon: \`npm stage reject <stage-id>\` and delete the draft release."
           } >> "$GITHUB_STEP_SUMMARY"

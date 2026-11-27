@@ -43,7 +43,7 @@ Works with `@mapbox/mapbox-gl-draw` 1.4 and 1.5 and mapbox-gl v3. See [Migrating
 - Unit tests run on Jest 30 against the real mapbox-gl-draw code.
 - Build fixtures cover Node, TypeScript, webpack, React, Vue, Angular and Next.js.
 - CI runs across Node 20–24 and mapbox-gl-draw 1.4.0–latest, plus a weekly run against the latest draw.
-- Releases go through a manual GitHub Actions workflow and npm trusted publishing with provenance.
+- Releases go through a manual GitHub Actions workflow. It uses npm trusted publishing with provenance and staged publishing, so CI only stages a version and the maintainer approves it with npm 2FA.
 
 ## [1.1.2] - 2020-07-16
 
