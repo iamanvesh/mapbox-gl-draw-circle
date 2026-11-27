@@ -3,7 +3,7 @@ name: Demo site
 # Publishes examples/demo to GitHub Pages: https://iamanvesh.github.io/mapbox-gl-draw-circle/
 #   /           mapbox-gl v3, using the MAPBOX_DEMO_TOKEN secret
 #   /maplibre/  MapLibre + OpenFreeMap basemap, no token needed
-# Without the secret, / is the MapLibre build, so the site never shows a blank map.
+# Without the secret, / is the MapLibre build too, so the site never shows a blank map.
 #
 # MAPBOX_DEMO_TOKEN must be a *public* (pk.) token restricted to https://iamanvesh.github.io.
 # It ends up in the page's JavaScript like any browser map token; the secret only keeps it out
@@ -53,18 +53,18 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf site
+          # /maplibre/ always exists (the README links to it).
+          DEMO_BASE="${SITE}maplibre/" VITE_MAP_ENGINE=maplibre VITE_BASEMAP="$OPENFREEMAP_STYLE" \
+            VITE_ALT_ENGINE_URL="$SITE" npx vite build --outDir site/maplibre
           if [ -n "$MAPBOX_DEMO_TOKEN" ]; then
-            # MapLibre version under /maplibre/, mapbox-gl version at the root.
-            DEMO_BASE="${SITE}maplibre/" VITE_MAP_ENGINE=maplibre VITE_BASEMAP="$OPENFREEMAP_STYLE" \
-              VITE_ALT_ENGINE_URL="$SITE" npx vite build --outDir site/maplibre
             DEMO_BASE="$SITE" VITE_MAP_ENGINE=mapbox VITE_MAPBOX_TOKEN="$MAPBOX_DEMO_TOKEN" \
               VITE_ALT_ENGINE_URL="${SITE}maplibre/" npx vite build --outDir site/root
-            mv site/maplibre site/root/maplibre
           else
-            echo "::warning::MAPBOX_DEMO_TOKEN is not set; publishing only the MapLibre demo."
+            echo "::warning::MAPBOX_DEMO_TOKEN is not set; the root page is the MapLibre demo too."
             DEMO_BASE="$SITE" VITE_MAP_ENGINE=maplibre VITE_BASEMAP="$OPENFREEMAP_STYLE" \
               npx vite build --outDir site/root
           fi
+          mv site/maplibre site/root/maplibre
           touch site/root/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
