@@ -16,7 +16,7 @@ Adds circle drawing and editing to [mapbox-gl-draw](https://github.com/mapbox/ma
 
 ![Moving and resizing a circle](https://raw.githubusercontent.com/iamanvesh/mapbox-gl-draw-circle/master/demo/EditCircleDemo.gif)
 
-**[Try the live demo](https://iamanvesh.github.io/mapbox-gl-draw-circle/)** ([MapLibre version](https://iamanvesh.github.io/mapbox-gl-draw-circle/maplibre/)), or run the [demo app](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/examples/demo/README.md) locally. The basemap is © [OpenFreeMap](https://openfreemap.org), [OpenMapTiles](https://openmaptiles.org) and [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
+**[Try the live demo](https://iamanvesh.github.io/mapbox-gl-draw-circle/)** ([MapLibre version](https://iamanvesh.github.io/mapbox-gl-draw-circle/maplibre/)), or run the [demo app](https://github.com/iamanvesh/mapbox-gl-draw-circle/blob/master/examples/demo/README.md) locally. Map data © [Mapbox](https://www.mapbox.com/about/maps/) © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors.
 
 ## Installation
 
