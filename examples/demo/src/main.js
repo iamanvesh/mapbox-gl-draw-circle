@@ -1,5 +1,3 @@
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
@@ -9,10 +7,28 @@ import {
   SimpleSelectMode,
 } from 'mapbox-gl-draw-circle';
 
-// With a token (VITE_MAPBOX_TOKEN) the demo shows a real basemap.
+// Map engine is chosen at build time: VITE_MAP_ENGINE=maplibre builds the demo on maplibre-gl
+// (best effort; mapbox-gl-draw only officially supports mapbox-gl). Each engine lives in its own
+// module, so the default mapbox build doesn't bundle maplibre-gl and vice versa.
+const engine = import.meta.env.VITE_MAP_ENGINE === 'maplibre' ? 'maplibre' : 'mapbox';
+const { default: gl } = engine === 'maplibre'
+  ? await import('./engine-maplibre.js')
+  : await import('./engine-mapbox.js');
+
+if (engine === 'maplibre') {
+  // mapbox-gl-draw hard-codes mapbox-gl class names; point them at MapLibre's (see README).
+  Object.assign(MapboxDraw.constants.classes, {
+    CANVAS: 'maplibregl-canvas',
+    CONTROL_BASE: 'maplibregl-ctrl',
+    CONTROL_PREFIX: 'maplibregl-ctrl-',
+    CONTROL_GROUP: 'maplibregl-ctrl-group',
+  });
+}
+
+// With a token (VITE_MAPBOX_TOKEN) the mapbox demo shows a real basemap.
 // Without one it uses an inline blank style, which needs no token: this is what the E2E tests run on.
-const token = import.meta.env.VITE_MAPBOX_TOKEN;
-if (token) mapboxgl.accessToken = token;
+const token = engine === 'mapbox' ? import.meta.env.VITE_MAPBOX_TOKEN : undefined;
+if (token) gl.accessToken = token;
 
 const blankStyle = {
   version: 8,
@@ -20,13 +36,15 @@ const blankStyle = {
   layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#f4f1ea' } }],
 };
 
-const map = new mapboxgl.Map({
+const map = new gl.Map({
   container: 'map',
   style: token ? 'mapbox://styles/mapbox/streets-v12' : blankStyle,
   center: [-73.9855, 40.758],
   zoom: 13,
-  // Keeps the WebGL buffer readable for screenshot comparisons in tests.
+  // Keeps the WebGL buffer readable for screenshot comparisons in tests
+  // (mapbox-gl option; maplibre-gl takes it under canvasContextAttributes).
   preserveDrawingBuffer: true,
+  canvasContextAttributes: { preserveDrawingBuffer: true },
 });
 
 const draw = new MapboxDraw({

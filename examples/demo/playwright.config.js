@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4173;
+// E2E_PORT lets several runs (e.g. mapbox and maplibre builds) coexist on one machine.
+const PORT = Number(process.env.E2E_PORT || 4173);
 
 export default defineConfig({
   testDir: './e2e',
@@ -25,7 +26,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run build && npm run preview',
+    command: `npm run build && npx vite preview --port ${PORT} --strictPort`,
     port: PORT,
     // Always start our own build: reusing whatever listens on the port can silently test a
     // different checkout (e.g. another git worktree). A busy port fails loudly instead.

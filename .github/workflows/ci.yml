@@ -80,6 +80,39 @@ jobs:
             examples/demo/test-results/
           retention-days: 14
 
+  e2e-maplibre:
+    name: Browser (maplibre-gl, draw 1.5.2, best effort)
+    runs-on: ubuntu-latest
+    # MapLibre is best effort: mapbox-gl-draw doesn't officially support it, so a failure here
+    # is a warning to look into, not a release blocker.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            examples/demo/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: examples/demo
+      - run: npx playwright install --with-deps chromium
+        working-directory: examples/demo
+      - run: npx playwright test
+        working-directory: examples/demo
+        env:
+          VITE_MAP_ENGINE: maplibre
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-maplibre
+          path: |
+            examples/demo/playwright-report/
+            examples/demo/test-results/
+          retention-days: 14
+
   fixtures:
     name: Consumer build (${{ matrix.app }}, node ${{ matrix.node }})
     runs-on: ubuntu-latest
