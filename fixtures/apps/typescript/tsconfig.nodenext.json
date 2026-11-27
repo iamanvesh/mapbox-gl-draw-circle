@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.bundler.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  }
+}

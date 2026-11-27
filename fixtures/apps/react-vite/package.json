@@ -1,0 +1,19 @@
+{
+  "name": "fixture-react-vite",
+  "private": true,
+  "type": "module",
+  "fixture": { "serve": "dist" },
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
+    "mapbox-gl": "^3.36.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.4.0"
+  }
+}

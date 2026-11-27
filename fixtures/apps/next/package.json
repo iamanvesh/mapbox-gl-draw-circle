@@ -1,0 +1,15 @@
+{
+  "name": "fixture-next",
+  "private": true,
+  "fixture": { "serve": "out" },
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
+    "mapbox-gl": "^3.36.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "fixture-angular",
+  "private": true,
+  "fixture": { "serve": "dist/fixture/browser" },
+  "scripts": {
+    "build": "ng build > build.log 2>&1; status=$?; cat build.log; [ $status -eq 0 ] && ! grep -q WARNING build.log"
+  },
+  "dependencies": {
+    "@angular/common": "^22.3.0",
+    "@angular/compiler": "^22.3.0",
+    "@angular/core": "^22.3.0",
+    "@angular/platform-browser": "^22.3.0",
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
+    "mapbox-gl": "^3.36.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.3.0",
+    "@angular/cli": "^22.3.0",
+    "@angular/compiler-cli": "^22.3.0",
+    "@types/mapbox__mapbox-gl-draw": "^1.4.9",
+    "typescript": "~6.0.0"
+  }
+}

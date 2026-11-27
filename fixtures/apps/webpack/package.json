@@ -1,0 +1,20 @@
+{
+  "name": "fixture-webpack",
+  "private": true,
+  "type": "module",
+  "fixture": { "serve": "dist" },
+  "scripts": {
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
+    "mapbox-gl": "^3.36.0"
+  },
+  "devDependencies": {
+    "css-loader": "^7.1.5",
+    "html-webpack-plugin": "^5.6.0",
+    "style-loader": "^4.0.0",
+    "webpack": "^5.113.0",
+    "webpack-cli": "^7.3.1"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "fixture-typescript",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.bundler.json && tsc -p tsconfig.nodenext.json"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
+    "mapbox-gl": "^3.36.0"
+  },
+  "devDependencies": {
+    "@types/mapbox__mapbox-gl-draw": "^1.4.9",
+    "typescript": "^7.0.2"
+  }
+}

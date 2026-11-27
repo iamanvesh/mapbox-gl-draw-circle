@@ -4,12 +4,17 @@
   "description": "A module to draw a circle using mapbox-gl-draw",
   "type": "module",
   "exports": {
-    ".": "./index.js",
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
     "./package.json": "./package.json"
   },
   "main": "./index.js",
+  "types": "./index.d.ts",
   "files": [
     "index.js",
+    "index.d.ts",
     "lib/"
   ],
   "sideEffects": false,
@@ -31,7 +36,13 @@
   "author": "Anvesh Kumar Arrabochu",
   "license": "MIT",
   "peerDependencies": {
-    "@mapbox/mapbox-gl-draw": ">=1.4.0"
+    "@mapbox/mapbox-gl-draw": ">=1.4.0",
+    "@types/mapbox__mapbox-gl-draw": "*"
+  },
+  "peerDependenciesMeta": {
+    "@types/mapbox__mapbox-gl-draw": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@turf/circle": "^7.4.0",

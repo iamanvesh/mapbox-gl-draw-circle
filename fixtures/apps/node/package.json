@@ -1,0 +1,11 @@
+{
+  "name": "fixture-node",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node check-esm.mjs && node check-cjs.cjs"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2"
+  }
+}

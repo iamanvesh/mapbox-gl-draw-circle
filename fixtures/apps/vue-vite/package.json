@@ -1,0 +1,18 @@
+{
+  "name": "fixture-vue-vite",
+  "private": true,
+  "type": "module",
+  "fixture": { "serve": "dist" },
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@mapbox/mapbox-gl-draw": "^1.5.2",
+    "mapbox-gl": "^3.36.0",
+    "vue": "^3.5.46"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.11",
+    "vite": "^8.4.0"
+  }
+}

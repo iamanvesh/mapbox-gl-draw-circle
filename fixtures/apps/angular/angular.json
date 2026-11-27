@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": { "analytics": false },
+  "newProjectRoot": "projects",
+  "projects": {
+    "fixture": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/fixture",
+            "browser": "src/main.ts",
+            "index": "src/index.html",
+            "tsConfig": "tsconfig.json",
+            "styles": [
+              "node_modules/mapbox-gl/dist/mapbox-gl.css",
+              "node_modules/@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css"
+            ],
+            "allowedCommonJsDependencies": ["mapbox-gl", "fast-deep-equal", "@mapbox/geojson-normalize", "@mapbox/geojson-area"],
+            "budgets": [{ "type": "initial", "maximumError": "5mb" }]
+          }
+        }
+      }
+    }
+  }
+}

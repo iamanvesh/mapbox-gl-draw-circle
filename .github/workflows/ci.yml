@@ -79,3 +79,38 @@ jobs:
             examples/demo/playwright-report/
             examples/demo/test-results/
           retention-days: 14
+
+  fixtures:
+    name: Consumer build (${{ matrix.app }}, node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [node, typescript, webpack, react-vite, vue-vite, angular, next]
+        node: [24]
+        include:
+          # CommonJS require() of the ESM package depends on Node's require(esm) support.
+          - { app: node, node: 20 }
+          - { app: node, node: 22 }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            fixtures/package-lock.json
+      - run: npm ci
+        working-directory: fixtures
+      - run: npx playwright install --with-deps chromium
+        working-directory: fixtures
+      # Packs the repo, installs the tarball into a fresh copy of the app, builds it and,
+      # for browser apps, smoke-tests the built output.
+      - run: node fixtures/run.mjs ${{ matrix.app }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fixture-${{ matrix.app }}-node${{ matrix.node }}
+          path: fixtures/test-results/
+          retention-days: 14

@@ -1,0 +1,12 @@
+{
+  "name": "mapbox-gl-draw-circle-fixtures",
+  "private": true,
+  "type": "module",
+  "description": "Installs the packed package into real consumer apps, builds them, and smoke-tests them in a browser.",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
+  }
+}
