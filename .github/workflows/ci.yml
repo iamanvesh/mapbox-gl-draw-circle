@@ -5,6 +5,8 @@ on:
     branches: [master]
   pull_request:
   workflow_dispatch:
+  # Called by release.yml as its test gate.
+  workflow_call:
   schedule:
     # Weekly run against the newest @mapbox/mapbox-gl-draw, to catch upstream breakage early.
     - cron: '0 6 * * 1'
@@ -13,8 +15,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Keyed by event too, so a release's test run (workflow_call from workflow_dispatch) is never
+  # cancelled by, and never cancels, the CI run of a push to the same branch.
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 jobs:
   unit:

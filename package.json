@@ -1,6 +1,6 @@
 {
   "name": "mapbox-gl-draw-circle",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "description": "A module to draw a circle using mapbox-gl-draw",
   "type": "module",
   "exports": {
@@ -15,7 +15,8 @@
   "files": [
     "index.js",
     "index.d.ts",
-    "lib/"
+    "lib/",
+    "CHANGELOG.md"
   ],
   "sideEffects": false,
   "engines": {

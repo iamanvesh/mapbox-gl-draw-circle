@@ -1,0 +1,139 @@
+name: Release
+
+# Manual release to npm. Run it from the Actions tab: "Release" → "Run workflow" on master.
+#
+# Before running it, commit to master:
+#   1. the new version in package.json (npm version <x.y.z> --no-git-tag-version), and
+#   2. a "## [x.y.z] - YYYY-MM-DD" section in CHANGELOG.md (used as the GitHub release notes).
+#
+# The workflow then:
+#   - checks the version isn't on npm yet, the tag doesn't exist, and the CHANGELOG has the section;
+#   - runs the full CI suite (unit matrix, browser tests, consumer fixtures) on the exact commit;
+#   - dry run (default): packs the package and prints what would be published, then stops;
+#   - real run: waits for approval on the `npm-release` environment, publishes with npm trusted
+#     publishing (OIDC, no token; provenance attached), then tags vX.Y.Z and creates the GitHub release.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Dry run (pack and validate only, nothing is published)
+        type: boolean
+        default: true
+      dist-tag:
+        description: npm dist-tag (prerelease versions such as 2.1.0-beta.1 must use "next")
+        type: choice
+        options: [latest, next]
+        default: latest
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Check version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - id: check
+        name: Check branch, version, tag and changelog
+        env:
+          DIST_TAG: ${{ inputs.dist-tag }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+
+          [ "$GITHUB_REF" = "refs/heads/master" ] || fail "Releases run from master only (got $GITHUB_REF)."
+
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          echo "Releasing $name@$version (dist-tag: $DIST_TAG)"
+
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            fail "$name@$version is already on npm. Bump the version in package.json first."
+          fi
+          if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+            fail "Tag v$version already exists."
+          fi
+          grep -q "^## \[$version\]" CHANGELOG.md || fail "CHANGELOG.md has no '## [$version]' section."
+
+          case "$version" in
+            *-*) [ "$DIST_TAG" = "next" ] || fail "Prerelease $version must be published with dist-tag 'next'." ;;
+          esac
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Test
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+
+  dry-run:
+    name: Dry run (nothing published)
+    if: inputs.dry-run
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Pack
+        run: npm pack --dry-run
+      - name: Release notes
+        run: node .github/scripts/release-notes.mjs "${{ needs.prepare.outputs.version }}"
+      - name: Summary
+        run: |
+          {
+            echo "### Dry run passed for v${{ needs.prepare.outputs.version }}"
+            echo "Re-run with **Dry run** unchecked to publish with dist-tag \`${{ inputs.dist-tag }}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Publish to npm
+    if: ${{ !inputs.dry-run }}
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    # Required reviewers on this environment make the run pause for approval here.
+    environment:
+      name: npm-release
+      url: https://www.npmjs.com/package/mapbox-gl-draw-circle/v/${{ needs.prepare.outputs.version }}
+    permissions:
+      contents: write # create the tag and GitHub release
+      id-token: write # npm trusted publishing (OIDC) and provenance
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm >= 11.5.1.
+      - run: npm install -g npm@latest && npm --version
+      - name: Publish
+        run: npm publish --access public --tag "${{ inputs.dist-tag }}"
+      - name: Tag and GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          node .github/scripts/release-notes.mjs "$VERSION" > notes.md
+          prerelease=""
+          case "$VERSION" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "v$VERSION" --notes-file notes.md $prerelease
+          {
+            echo "### Published mapbox-gl-draw-circle@$VERSION"
+            echo "- npm: https://www.npmjs.com/package/mapbox-gl-draw-circle/v/$VERSION (dist-tag \`${{ inputs.dist-tag }}\`)"
+            echo "- GitHub release: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/v$VERSION"
+          } >> "$GITHUB_STEP_SUMMARY"
