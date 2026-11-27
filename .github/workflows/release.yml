@@ -125,15 +125,18 @@ jobs:
       id-token: write # npm trusted publishing (OIDC) and provenance
     steps:
       - uses: actions/checkout@v5
+      # No registry-url here: it makes setup-node write a placeholder _authToken, which npm falls
+      # back to when the OIDC exchange fails, hiding the real error behind a generic E401.
       - uses: actions/setup-node@v5
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
       # Staged publishing with trusted publishing needs a current npm.
       - run: npm install -g npm@latest && npm --version
       - name: Stage
         env:
           DIST_TAG: ${{ inputs.dist-tag }}
+          # Logs the OIDC token exchange with npm, so a trusted-publisher mismatch is visible.
+          NPM_CONFIG_LOGLEVEL: verbose
         run: npm stage publish --access public --provenance --tag "$DIST_TAG"
       - name: Draft GitHub release
         env:
